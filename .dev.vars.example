@@ -1,0 +1,3 @@
+# Copia este archivo a ".dev.vars" (no se versiona) para desarrollo local.
+# Token administrativo para validar operaciones de escritura/borrado/subida.
+ADMIN_SECRET_KEY=cambia-esto-por-un-token-largo-y-secreto

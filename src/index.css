@@ -1,0 +1,112 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------------------
+   Cartel de mesa imprimible (tent card)
+--------------------------------------------------------------------------- */
+.tent-card {
+  background: #ffffff;
+  color: #0f0f12;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  overflow: hidden;
+}
+.tent-a6 {
+  width: 105mm;
+  height: 148mm;
+}
+.tent-a5 {
+  width: 148mm;
+  height: 210mm;
+}
+.tent-inner {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 10mm 8mm;
+  box-sizing: border-box;
+}
+.tent-logo {
+  width: 22mm;
+  height: 22mm;
+  object-fit: cover;
+  border-radius: 999px;
+  border: 2px solid #f49120;
+}
+.tent-logo-fallback {
+  width: 22mm;
+  height: 22mm;
+  border-radius: 999px;
+  border: 2px solid #f49120;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 9mm;
+  color: #f49120;
+}
+.tent-name {
+  margin: 4mm 0 2mm;
+  font-size: 6mm;
+  font-weight: 800;
+}
+.tent-phrase {
+  margin: 0 0 5mm;
+  font-size: 4mm;
+  color: #444;
+  max-width: 85%;
+}
+.tent-qr {
+  width: 55mm;
+  height: 55mm;
+}
+.tent-a5 .tent-qr {
+  width: 75mm;
+  height: 75mm;
+}
+.tent-cta {
+  margin-top: 4mm;
+  font-size: 3mm;
+  color: #666;
+}
+.tent-footer {
+  margin-top: auto;
+  font-size: 3mm;
+  color: #999;
+  font-weight: 600;
+}
+
+/* ---------------------------------------------------------------------------
+   Impresión: solo el cartel, a tamaño real
+--------------------------------------------------------------------------- */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    left: 50%;
+    top: 10mm;
+    transform: translateX(-50%);
+    box-shadow: none !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+}

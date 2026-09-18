@@ -1,0 +1,29 @@
+name = "clickclick-go"
+compatibility_date = "2024-09-23"
+pages_build_output_dir = "dist"
+
+# ---------------------------------------------------------------------------
+# Workers KV — metadatos de negocios (JSON ligero, < 5 KB por negocio)
+# El ID se rellena tras ejecutar:  npx wrangler kv namespace create BUSINESSES
+# ---------------------------------------------------------------------------
+[[kv_namespaces]]
+binding = "BUSINESSES"
+id = "cfa813b56aaa4c3e903ec8b4c4cedfb9"
+# preview_id = "..."  # opcional para entornos de preview
+
+# ---------------------------------------------------------------------------
+# R2 — almacenamiento de imágenes (logos, portadas).
+# Bucket existente en la cuenta corporativa: go-negocios
+# ---------------------------------------------------------------------------
+[[r2_buckets]]
+binding = "ASSETS_BUCKET"
+bucket_name = "go-negocios"
+
+# ---------------------------------------------------------------------------
+# Variables de entorno públicas (no secretas).
+# El token administrativo ADMIN_SECRET_KEY se define como *secret*, NO aquí:
+#   npx wrangler pages secret put ADMIN_SECRET_KEY
+# En local se usa el archivo .dev.vars (no versionado).
+# ---------------------------------------------------------------------------
+[vars]
+APP_NAME = "ClickClick Go"
