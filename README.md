@@ -107,10 +107,12 @@ src/                          # App React (perfil público + panel admin)
 wrangler.toml                 # Bindings KV (BUSINESSES) y R2 (ASSETS_BUCKET)
 ```
 
-## Pendientes de configuración (dashboard)
+## Configuración de producción
 
-- **Dominio**: en Workers & Pages → clickclick-go → Custom domains, añadir
-  `go.clyclick.online` (la zona ya está en Cloudflare, crea el CNAME + SSL).
+- **Despliegue**: Cloudflare Pages está conectado de forma nativa a
+  `carvajalmauricio/go-clyclick`; cada cambio en `main` despliega el proyecto
+  `clickclick-go-git` automáticamente.
+- **Dominio**: `go.clyclick.online` apunta al proyecto `clickclick-go-git`.
 - **Zero Trust**: `go.clyclick.online/admin` está protegido con Access + OTP
   por email. Las operaciones de escritura viven bajo `/admin/api/*` para que
   Access inyecte el JWT que validan las Pages Functions.
