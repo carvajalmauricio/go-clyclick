@@ -60,6 +60,15 @@ export default function ProfileView({ business, compact = false }) {
           </p>
         )}
 
+        {/* Redes sociales */}
+        {socials.length > 0 && (
+          <div className="mt-5 flex flex-wrap justify-center gap-3">
+            {socials.map((s) => (
+              <SocialLinkItem key={s.key} social={s} theme={theme} />
+            ))}
+          </div>
+        )}
+
         {/* Botones de acción */}
         <div className="w-full mt-6 flex flex-col gap-3">
           {actions.map((a) => (
@@ -95,15 +104,6 @@ export default function ProfileView({ business, compact = false }) {
             </button>
           )}
         </div>
-
-        {/* Redes sociales */}
-        {socials.length > 0 && (
-          <div className="mt-6 flex flex-wrap justify-center gap-3">
-            {socials.map((s) => (
-              <SocialLinkItem key={s.key} social={s} theme={theme} />
-            ))}
-          </div>
-        )}
 
         {/* Footer fijado al fondo (mt-auto lo empuja abajo) */}
         <div className="mt-auto pt-10 w-full flex flex-col items-center gap-2">
