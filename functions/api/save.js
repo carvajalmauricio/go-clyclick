@@ -1,6 +1,6 @@
 // POST /api/save
 // Crea o edita un negocio en KV y actualiza el índice global.
-// Requiere Authorization: Bearer <ADMIN_SECRET_KEY>.
+// Requiere Cloudflare Access o Authorization: Bearer <ADMIN_SECRET_KEY>.
 import {
   json,
   KEY_PREFIX,

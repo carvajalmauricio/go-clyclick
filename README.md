@@ -55,14 +55,31 @@ npm run pages:dev
 |---|---|---|---|
 | GET | `/api/business/:slug` | pública | Perfil de un negocio (edge-cache) |
 | GET | `/api/businesses` | pública | Índice ligero de negocios (para el admin) |
-| POST | `/api/save` | Bearer | Crear/editar negocio en KV |
-| POST | `/api/delete` | Bearer | Eliminar negocio de KV |
-| POST | `/api/upload` | Bearer | Subir logo (multipart) a R2 |
+| POST | `/admin/api/save` | Access | Crear/editar negocio en KV |
+| POST | `/admin/api/delete` | Access | Eliminar negocio de KV |
+| POST | `/admin/api/upload` | Access | Subir logo (multipart) a R2 |
 | GET | `/api/assets/*` | pública | Servir imágenes desde R2 (cache immutable) |
 
-Las escrituras requieren `Authorization: Bearer <ADMIN_SECRET_KEY>`.
+Las escrituras se sirven bajo `/admin`, por lo que heredan la protección de
+Cloudflare Access. Las rutas heredadas bajo `/api` conservan el fallback
+`Authorization: Bearer <ADMIN_SECRET_KEY>` para desarrollo y transición.
 
 ## Despliegue a producción
+
+El despliegue de producción se ejecuta automáticamente mediante GitHub Actions
+cuando se hace `push` a la rama `main`. El workflow está en
+`.github/workflows/deploy-pages.yml` y publica el build en el proyecto Pages
+existente `clickclick-go`, conservando su dominio, bindings y secretos.
+
+El repositorio debe tener configurados estos GitHub Actions secrets:
+
+- `CLOUDFLARE_ACCOUNT_ID`
+- `CLOUDFLARE_API_TOKEN` con permiso `Account / Cloudflare Pages / Edit`
+
+También puede iniciarse manualmente desde la pestaña **Actions** de GitHub con
+el evento `workflow_dispatch`.
+
+### Despliegue manual de emergencia
 
 ```bash
 # (Solo la primera vez) crear el proyecto Pages
@@ -92,6 +109,7 @@ functions/
     delete.js                 # POST eliminar (auth)
     upload.js                 # POST subir logo a R2 (auth)
     assets/[[path]].js        # GET servir imágenes de R2
+  admin/api/                  # aliases protegidos por Access para escrituras
 public/                       # Assets estáticos + _redirects (SPA)
 src/                          # App React (perfil público + panel admin)
 wrangler.toml                 # Bindings KV (BUSINESSES) y R2 (ASSETS_BUCKET)
@@ -101,5 +119,6 @@ wrangler.toml                 # Bindings KV (BUSINESSES) y R2 (ASSETS_BUCKET)
 
 - **Dominio**: en Workers & Pages → clickclick-go → Custom domains, añadir
   `go.clyclick.online` (la zona ya está en Cloudflare, crea el CNAME + SSL).
-- **Zero Trust** (opcional): proteger `go.clyclick.online/admin` con Access +
-  OTP por email (no proteger `/api/*`, que ya usa token Bearer).
+- **Zero Trust**: `go.clyclick.online/admin` está protegido con Access + OTP
+  por email. Las operaciones de escritura viven bajo `/admin/api/*` para que
+  Access inyecte el JWT que validan las Pages Functions.

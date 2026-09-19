@@ -1,6 +1,6 @@
 // POST /api/delete
 // Elimina un negocio de KV y lo quita del índice global.
-// Requiere Authorization: Bearer <ADMIN_SECRET_KEY>.
+// Requiere Cloudflare Access o Authorization: Bearer <ADMIN_SECRET_KEY>.
 // Body: { "slug": "pizzeria-napoli" }
 import {
   json,

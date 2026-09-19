@@ -47,7 +47,7 @@ export async function getBusiness(slug) {
 
 // Crea o edita un negocio (protegido por Access)
 export async function saveBusiness(business, { isEdit = false } = {}) {
-  const res = await fetch('/api/save', {
+  const res = await fetch('/admin/api/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...business, isEdit }),
@@ -63,7 +63,7 @@ export async function uploadLogo(file, slug) {
   const form = new FormData()
   form.append('file', file)
   form.append('slug', slug || 'general')
-  const res = await fetch('/api/upload', {
+  const res = await fetch('/admin/api/upload', {
     method: 'POST',
     body: form, // NO fijar Content-Type: el browser pone el boundary
   })
@@ -75,7 +75,7 @@ export async function uploadLogo(file, slug) {
 
 // Elimina un negocio (protegido por Access)
 export async function deleteBusiness(slug) {
-  const res = await fetch('/api/delete', {
+  const res = await fetch('/admin/api/delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ slug }),

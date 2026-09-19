@@ -1,6 +1,6 @@
 // POST /api/upload
 // Sube una imagen (logo) al bucket R2 y devuelve la URL pública servida por /api/assets/*.
-// Requiere Authorization: Bearer <ADMIN_SECRET_KEY>.
+// Requiere Cloudflare Access o Authorization: Bearer <ADMIN_SECRET_KEY>.
 // Body: multipart/form-data con campos "file" (imagen) y "slug" (negocio).
 import { json, isAuthorized, slugify } from './_lib.js'
 
