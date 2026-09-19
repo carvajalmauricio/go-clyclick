@@ -22,7 +22,6 @@ export default function ShareMenu({ business, theme, compact = false }) {
         if (error?.name === 'AbortError') return
       }
     }
-    setOpen(true)
   }
 
   async function copy() {
@@ -35,7 +34,7 @@ export default function ShareMenu({ business, theme, compact = false }) {
     <>
       <button
         type="button"
-        onClick={share}
+        onClick={() => setOpen(true)}
         aria-label="Compartir perfil"
         className={`absolute z-20 flex items-center justify-center rounded-full backdrop-blur-md transition hover:scale-105 ${compact ? 'right-3 top-3 h-9 w-9' : 'right-5 top-5 h-11 w-11'}`}
         style={{ background: `${theme.card}dd`, color: theme.text, border: `1px solid ${theme.border}` }}
@@ -81,6 +80,11 @@ export default function ShareMenu({ business, theme, compact = false }) {
               >
                 Descargar QR
               </button>
+              {'share' in navigator && (
+                <button type="button" onClick={share} className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-3 font-semibold">
+                  <Icon name="share" size={18} /> Más opciones para compartir
+                </button>
+              )}
             </div>
           </div>
         </div>
