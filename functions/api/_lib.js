@@ -228,17 +228,50 @@ export function normalizeBusiness(payload) {
     return { ok: false, error: 'No se pudo generar un slug válido' }
   }
 
-  // Enlaces: array de { type, label, value, enabled }
-  const links = Array.isArray(payload.links)
-    ? payload.links
-        .filter((l) => l && typeof l === 'object')
-        .map((l) => ({
-          type: String(l.type || 'custom'),
-          label: String(l.label || '').trim(),
-          value: String(l.value || '').trim(),
-          enabled: l.enabled !== false,
+  const allowedActions = ['whatsapp', 'review', 'maps', 'waze', 'menu', 'website', 'contact']
+  const actionSettings = Array.isArray(payload.actionSettings)
+    ? payload.actionSettings
+        .filter((item) => item && allowedActions.includes(item.type))
+        .slice(0, allowedActions.length)
+        .map((item, order) => ({
+          type: item.type,
+          label: String(item.label || '').trim().slice(0, 80),
+          enabled: item.enabled !== false,
+          order: Number.isFinite(Number(item.order)) ? Number(item.order) : order,
+          layout: item.layout === 'featured' ? 'featured' : 'classic',
+          thumbnail: String(item.thumbnail || '').trim(),
+          sectionId: String(item.sectionId || '').trim().slice(0, 80),
+          animation: ['pulse', 'bounce'].includes(item.animation) ? item.animation : 'none',
         }))
     : []
+
+  const sections = Array.isArray(payload.sections)
+    ? payload.sections.slice(0, 12).map((section, index) => ({
+        id: String(section?.id || `section-${index}`).trim().slice(0, 80),
+        title: String(section?.title || '').trim().slice(0, 60),
+      })).filter((section) => section.title)
+    : []
+
+  const background = payload.background && typeof payload.background === 'object'
+    ? {
+        type: ['theme', 'solid', 'gradient', 'image', 'video'].includes(payload.background.type) ? payload.background.type : 'theme',
+        color: String(payload.background.color || '').trim() || undefined,
+        color2: String(payload.background.color2 || '').trim() || undefined,
+        angle: Math.max(0, Math.min(360, Number(payload.background.angle) || 160)),
+        url: String(payload.background.url || '').trim() || undefined,
+        position: String(payload.background.position || 'center').trim(),
+        overlay: Math.max(0, Math.min(0.75, Number(payload.background.overlay) || 0)),
+        pattern: ['none', 'shapes', 'grid', 'glow'].includes(payload.background.pattern) ? payload.background.pattern : 'none',
+      }
+    : { type: 'theme', pattern: 'none', overlay: 0.25 }
+
+  const buttonStyle = payload.buttonStyle && typeof payload.buttonStyle === 'object'
+    ? {
+        shape: ['square', 'rounded', 'pill'].includes(payload.buttonStyle.shape) ? payload.buttonStyle.shape : 'rounded',
+        variant: ['filled', 'outline', 'glass'].includes(payload.buttonStyle.variant) ? payload.buttonStyle.variant : 'filled',
+        shadow: ['none', 'soft', 'solid'].includes(payload.buttonStyle.shadow) ? payload.buttonStyle.shadow : 'soft',
+      }
+    : { shape: 'rounded', variant: 'filled', shadow: 'soft' }
 
   const business = {
     slug,
@@ -247,6 +280,8 @@ export function normalizeBusiness(payload) {
     description: String(payload.description || '').trim(),
     logo: String(payload.logo || '').trim(), // URL (R2 en el futuro o externa por ahora)
     theme: String(payload.theme || 'vibrant'),
+    background,
+    buttonStyle,
     // Colores personalizados (solo se usan si theme === 'custom')
     customColors:
       payload.customColors && typeof payload.customColors === 'object'
@@ -274,7 +309,8 @@ export function normalizeBusiness(payload) {
       facebook: String(payload.social?.facebook || '').trim(),
       linkedin: String(payload.social?.linkedin || '').trim(),
     },
-    links,
+    actionSettings,
+    sections,
     updatedAt: Date.now(),
     createdAt: Number(payload.createdAt) || Date.now(),
   }

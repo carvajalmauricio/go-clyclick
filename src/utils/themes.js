@@ -50,6 +50,57 @@ export const THEMES = {
     card: '#0e1f19',
     border: '#1c3b30',
   },
+  sunset: {
+    id: 'sunset',
+    name: 'Sunset Glow',
+    bg: '#f97316',
+    bgGradient: 'linear-gradient(180deg, #67e8f9 0%, #f9a8d4 48%, #f97316 100%)',
+    text: '#3b1722',
+    subtext: '#71364a',
+    accent: '#ffffff',
+    accentText: '#7c2d12',
+    card: 'rgba(255,255,255,.88)',
+    border: 'rgba(255,255,255,.65)',
+  },
+  blueprint: {
+    id: 'blueprint',
+    name: 'Blue Shapes',
+    bg: '#284b83',
+    bgGradient: 'linear-gradient(145deg, #213d6b 0%, #5273ad 100%)',
+    pattern: 'shapes',
+    text: '#ffffff',
+    subtext: '#dbeafe',
+    accent: '#f8fafc',
+    accentText: '#1e3a5f',
+    card: 'rgba(239,246,255,.9)',
+    border: 'rgba(255,255,255,.45)',
+  },
+  grid: {
+    id: 'grid',
+    name: 'Editorial Grid',
+    bg: '#3f2027',
+    bgGradient: 'linear-gradient(180deg, #522b34 0%, #2a151a 100%)',
+    pattern: 'grid',
+    text: '#fff7ed',
+    subtext: '#e8c9bf',
+    accent: '#fff1dc',
+    accentText: '#3f2027',
+    card: 'rgba(255,241,220,.92)',
+    border: 'rgba(255,255,255,.35)',
+  },
+  aurora: {
+    id: 'aurora',
+    name: 'Aurora',
+    bg: '#26051f',
+    bgGradient: 'linear-gradient(165deg, #780b46 0%, #a21caf 42%, #f0abfc 100%)',
+    pattern: 'glow',
+    text: '#ffffff',
+    subtext: '#fae8ff',
+    accent: '#ffffff',
+    accentText: '#701a75',
+    card: 'rgba(255,255,255,.12)',
+    border: 'rgba(255,255,255,.5)',
+  },
 }
 
 export const THEME_LIST = Object.values(THEMES)
@@ -85,6 +136,27 @@ export function resolveTheme(themeId, customColors) {
     }
   }
   return THEMES[themeId] || THEMES.vibrant
+}
+
+export function getBackgroundStyle(theme, background) {
+  const style = { background: theme.bgGradient || theme.bg }
+  if (!background || background.type === 'theme') return style
+  if (background.type === 'solid') return { background: background.color || theme.bg }
+  if (background.type === 'gradient') {
+    return {
+      background: `linear-gradient(${background.angle || 160}deg, ${background.color || theme.bg} 0%, ${background.color2 || theme.accent} 100%)`,
+    }
+  }
+  if (background.type === 'image' && background.url) {
+    return {
+      backgroundColor: theme.bg,
+      backgroundImage: `linear-gradient(rgba(0,0,0,${Number(background.overlay ?? 0.25)}), rgba(0,0,0,${Number(background.overlay ?? 0.25)})), url("${background.url}")`,
+      backgroundSize: 'cover',
+      backgroundPosition: background.position || 'center',
+      backgroundAttachment: 'fixed',
+    }
+  }
+  return style
 }
 
 // Determina si un color hex es "claro" (para elegir texto oscuro sobre él).

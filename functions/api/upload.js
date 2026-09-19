@@ -11,8 +11,11 @@ const ALLOWED = {
   'image/webp': 'webp',
   'image/svg+xml': 'svg',
   'image/gif': 'gif',
+  'video/mp4': 'mp4',
+  'video/webm': 'webm',
 }
-const MAX_BYTES = 5 * 1024 * 1024 // 5 MB
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024
 
 export async function onRequestPost(context) {
   const { request, env } = context
@@ -34,6 +37,8 @@ export async function onRequestPost(context) {
 
   const file = form.get('file')
   const slug = slugify(form.get('slug') || 'general')
+  const requestedKind = String(form.get('kind') || 'media')
+  const kind = ['logo', 'thumbnail', 'background'].includes(requestedKind) ? requestedKind : 'media'
 
   if (!file || typeof file === 'string') {
     return json({ error: 'Falta el archivo "file"' }, 400)
@@ -41,16 +46,17 @@ export async function onRequestPost(context) {
 
   const ext = ALLOWED[file.type]
   if (!ext) {
-    return json({ error: `Tipo no permitido: ${file.type}. Usa PNG, JPG, WEBP, SVG o GIF.` }, 400)
+    return json({ error: `Tipo no permitido: ${file.type}. Usa PNG, JPG, WEBP, SVG, GIF, MP4 o WEBM.` }, 400)
   }
 
   const buffer = await file.arrayBuffer()
-  if (buffer.byteLength > MAX_BYTES) {
-    return json({ error: 'El archivo supera 5 MB' }, 400)
+  const isVideo = file.type.startsWith('video/')
+  const maxBytes = isVideo ? MAX_VIDEO_BYTES : MAX_IMAGE_BYTES
+  if (buffer.byteLength > maxBytes) {
+    return json({ error: `El archivo supera ${isVideo ? 25 : 5} MB` }, 400)
   }
 
-  // Clave organizada por negocio: businesses/:slug/logo-<timestamp>.<ext>
-  const key = `businesses/${slug}/logo-${Date.now()}.${ext}`
+  const key = `businesses/${slug}/${kind}-${Date.now()}.${ext}`
 
   await env.ASSETS_BUCKET.put(key, buffer, {
     httpMetadata: {

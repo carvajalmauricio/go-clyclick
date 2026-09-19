@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import ThemeSelector from './ThemeSelector.jsx'
+import ActionManager from './ActionManager.jsx'
 import { uploadLogo } from '../utils/api.js'
 
 // Formulario controlado de configuración de negocio.
@@ -103,6 +104,10 @@ export default function BusinessForm({ value, onChange, isEdit }) {
         </Field>
       </Section>
 
+      <Section title="Orden y presentación">
+        <ActionManager business={b} onChange={onChange} />
+      </Section>
+
       <Section title="Contacto (vCard)">
         <Field label="Teléfono">
           <input className={inputCls} value={b.phone || ''} onChange={set('phone')} placeholder="+593..." />
@@ -134,8 +139,13 @@ export default function BusinessForm({ value, onChange, isEdit }) {
         <ThemeSelector
           value={b.theme || 'vibrant'}
           customColors={b.customColors}
+          background={b.background}
+          buttonStyle={b.buttonStyle}
+          slug={b.slug || b.name}
           onChange={(theme) => onChange({ theme })}
           onCustomChange={(customColors) => onChange({ customColors })}
+          onBackgroundChange={(background) => onChange({ background })}
+          onButtonStyleChange={(buttonStyle) => onChange({ buttonStyle })}
         />
       </Section>
     </div>

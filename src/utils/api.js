@@ -60,9 +60,15 @@ export async function saveBusiness(business, { isEdit = false } = {}) {
 
 // Sube una imagen (logo) a R2 (protegido por Access)
 export async function uploadLogo(file, slug) {
+  return uploadMedia(file, slug, 'logo')
+}
+
+// Sube imágenes o videos usados por el perfil (logo, miniatura o fondo).
+export async function uploadMedia(file, slug, kind = 'media') {
   const form = new FormData()
   form.append('file', file)
   form.append('slug', slug || 'general')
+  form.append('kind', kind)
   const res = await fetch('/admin/api/upload', {
     method: 'POST',
     body: form, // NO fijar Content-Type: el browser pone el boundary

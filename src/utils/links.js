@@ -44,58 +44,65 @@ export function ensureHttp(url) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`
 }
 
+export const ACTION_DEFINITIONS = [
+  { type: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp', field: 'whatsapp', valueLabel: 'Número con código de país' },
+  { type: 'review', label: 'Déjanos 5 estrellas en Google', icon: 'star', field: 'googleReviewUrl', valueLabel: 'Enlace de reseñas de Google' },
+  { type: 'maps', label: 'Cómo llegar (Google Maps)', icon: 'maps', field: 'mapsUrl', valueLabel: 'Enlace de Google Maps' },
+  { type: 'waze', label: 'Abrir en Waze', icon: 'map', field: 'wazeUrl', valueLabel: 'Enlace de Waze' },
+  { type: 'menu', label: 'Ver menú / catálogo', icon: 'menu', field: 'menuUrl', valueLabel: 'Enlace del menú o catálogo' },
+  { type: 'website', label: 'Sitio web', icon: 'globe', field: 'website', valueLabel: 'Sitio web' },
+  { type: 'contact', label: 'Guardar contacto', icon: 'contact', field: 'phone', valueLabel: 'Usa los datos de la sección Contacto' },
+]
+
+export function getActionSettings(business) {
+  const saved = Array.isArray(business?.actionSettings) ? business.actionSettings : []
+  const byType = new Map(saved.map((item) => [item.type, item]))
+  return ACTION_DEFINITIONS.map((definition, index) => ({
+    type: definition.type,
+    label: definition.label,
+    enabled: true,
+    order: index,
+    layout: 'classic',
+    thumbnail: '',
+    sectionId: '',
+    animation: 'none',
+    ...(byType.get(definition.type) || {}),
+  })).sort((a, b) => a.order - b.order)
+}
+
 // Devuelve la lista de acciones activas del negocio, en orden de prioridad,
 // lista para renderizar como botones.
 export function buildActions(business) {
   const b = business || {}
-  const actions = []
+  const urls = {
+    whatsapp: b.whatsapp ? whatsappUrl(b.whatsapp, `Hola ${b.name || ''}, vengo desde su perfil ClickClick`) : '',
+    review: b.googleReviewUrl ? ensureHttp(b.googleReviewUrl) : '',
+    maps: b.mapsUrl ? ensureHttp(b.mapsUrl) : '',
+    waze: b.wazeUrl ? ensureHttp(b.wazeUrl) : '',
+    menu: b.menuUrl ? ensureHttp(b.menuUrl) : '',
+    website: b.website ? ensureHttp(b.website) : '',
+    contact: b.phone || b.email || b.whatsapp ? '#contact' : '',
+  }
+  const definitions = new Map(ACTION_DEFINITIONS.map((item) => [item.type, item]))
 
-  if (b.whatsapp) {
-    actions.push({
-      key: 'whatsapp',
-      label: 'WhatsApp',
-      icon: 'whatsapp',
-      url: whatsappUrl(b.whatsapp, `Hola ${b.name || ''}, vengo desde su perfil ClickClick`),
-      primary: true,
-    })
-  }
-  if (b.googleReviewUrl) {
-    actions.push({
-      key: 'review',
-      label: 'Déjanos 5 estrellas en Google',
-      icon: 'star',
-      url: ensureHttp(b.googleReviewUrl),
-      highlight: true,
-    })
-  }
-  if (b.mapsUrl) {
-    actions.push({ key: 'maps', label: 'Cómo llegar (Google Maps)', icon: 'maps', url: ensureHttp(b.mapsUrl) })
-  }
-  if (b.wazeUrl) {
-    actions.push({ key: 'waze', label: 'Abrir en Waze', icon: 'map', url: ensureHttp(b.wazeUrl) })
-  }
-  if (b.menuUrl) {
-    actions.push({ key: 'menu', label: 'Ver menú / catálogo', icon: 'menu', url: ensureHttp(b.menuUrl) })
-  }
-  if (b.website) {
-    actions.push({ key: 'website', label: 'Sitio web', icon: 'globe', url: ensureHttp(b.website) })
-  }
-
-  // Enlaces personalizados adicionales
-  if (Array.isArray(b.links)) {
-    for (const l of b.links) {
-      if (l && l.enabled !== false && l.value) {
-        actions.push({
-          key: `custom-${actions.length}`,
-          label: l.label || l.value,
-          icon: 'link',
-          url: ensureHttp(l.value),
-        })
+  return getActionSettings(b)
+    .filter((setting) => setting.enabled !== false && urls[setting.type])
+    .map((setting) => {
+      const definition = definitions.get(setting.type)
+      return {
+        key: setting.type,
+        label: setting.label || definition.label,
+        icon: definition.icon,
+        url: urls[setting.type],
+        primary: setting.type === 'whatsapp',
+        highlight: setting.type === 'review',
+        isContact: setting.type === 'contact',
+        layout: setting.layout || 'classic',
+        thumbnail: setting.thumbnail || '',
+        sectionId: setting.sectionId || '',
+        animation: setting.animation || 'none',
       }
-    }
-  }
-
-  return actions
+    })
 }
 
 // Redes sociales activas

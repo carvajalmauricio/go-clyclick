@@ -10,6 +10,46 @@ body {
   margin: 0;
 }
 
+.profile-pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.48;
+}
+.profile-pattern-grid {
+  background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
+  background-size: 34px 34px;
+}
+.profile-pattern-shapes {
+  background:
+    radial-gradient(ellipse at 12% 18%, rgba(255,255,255,.22) 0 9%, transparent 9.5%),
+    radial-gradient(ellipse at 88% 10%, rgba(5,18,50,.3) 0 13%, transparent 13.5%),
+    radial-gradient(ellipse at 75% 52%, rgba(255,255,255,.16) 0 12%, transparent 12.5%),
+    radial-gradient(ellipse at 20% 78%, rgba(8,31,76,.34) 0 15%, transparent 15.5%),
+    radial-gradient(ellipse at 92% 91%, rgba(255,255,255,.2) 0 10%, transparent 10.5%);
+  background-size: 210px 230px, 280px 250px, 260px 300px, 300px 250px, 230px 210px;
+}
+.profile-pattern-glow {
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,255,255,.34), transparent 30%),
+    radial-gradient(circle at 80% 55%, rgba(251,207,232,.35), transparent 34%),
+    radial-gradient(circle at 10% 90%, rgba(192,132,252,.45), transparent 30%);
+  filter: blur(10px);
+}
+@keyframes profilePulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.025); }
+}
+@keyframes profileBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+.profile-action-pulse { animation: profilePulse 2.2s ease-in-out infinite; }
+.profile-action-bounce { animation: profileBounce 1.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .profile-action-pulse, .profile-action-bounce { animation: none; }
+}
+
 /* ---------------------------------------------------------------------------
    Cartel de mesa imprimible (tent card)
 --------------------------------------------------------------------------- */

@@ -18,6 +18,8 @@ const EMPTY_BUSINESS = {
   description: '',
   logo: '',
   theme: 'vibrant',
+  background: { type: 'theme', pattern: 'none', overlay: 0.25 },
+  buttonStyle: { shape: 'rounded', variant: 'filled', shadow: 'soft' },
   whatsapp: '',
   googleReviewUrl: '',
   mapsUrl: '',
@@ -27,7 +29,8 @@ const EMPTY_BUSINESS = {
   email: '',
   website: '',
   social: { instagram: '', tiktok: '', facebook: '', linkedin: '' },
-  links: [],
+  actionSettings: [],
+  sections: [],
 }
 
 // El acceso a /admin lo protege Cloudflare Access (Google + OTP) ANTES de que
