@@ -1,4 +1,4 @@
-name = "clickclick-go"
+name = "clickclick-go-git"
 compatibility_date = "2024-09-23"
 pages_build_output_dir = "dist"
 
@@ -27,3 +27,5 @@ bucket_name = "go-negocios"
 # ---------------------------------------------------------------------------
 [vars]
 APP_NAME = "ClickClick Go"
+ACCESS_TEAM_DOMAIN = "ancient-cell-5be9.cloudflareaccess.com"
+ACCESS_AUD = "27c2a9dd5dea617cfa4112dad32fc309b2a310270b6f6e05231a3bf926f3efd7"

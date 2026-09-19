@@ -9,8 +9,8 @@ Plataforma serverless de enlaces inteligentes ("Linktree local") para negocios, 
 
 ## Producción
 
-- Proyecto Pages: **clickclick-go** (cuenta `Marilynlp34@gmail.com`)
-- URL de Pages: **https://clickclick-go.pages.dev**
+- Proyecto Pages: **clickclick-go-git** (cuenta `Marilynlp34@gmail.com`)
+- URL de Pages: **https://clickclick-go-git.pages.dev**
 - Dominio final: **https://go.clyclick.online** (con *y*)
 - Cuenta / Account ID: `b7b66ae5b0e09546ff49833d681753e9`
 - KV namespace `BUSINESSES`: `cfa813b56aaa4c3e903ec8b4c4cedfb9`
@@ -66,31 +66,23 @@ Cloudflare Access. Las rutas heredadas bajo `/api` conservan el fallback
 
 ## Despliegue a producción
 
-El despliegue de producción se ejecuta automáticamente mediante GitHub Actions
-cuando se hace `push` a la rama `main`. El workflow está en
-`.github/workflows/deploy-pages.yml` y publica el build en el proyecto Pages
-existente `clickclick-go`, conservando su dominio, bindings y secretos.
-
-El repositorio debe tener configurados estos GitHub Actions secrets:
-
-- `CLOUDFLARE_ACCOUNT_ID`
-- `CLOUDFLARE_API_TOKEN` con permiso `Account / Cloudflare Pages / Edit`
-
-También puede iniciarse manualmente desde la pestaña **Actions** de GitHub con
-el evento `workflow_dispatch`.
+El proyecto Pages `clickclick-go-git` está conectado directamente al repositorio
+GitHub `ArielVelaTI/go-clyclick`. Cada `push` a `main` hace que Cloudflare obtenga
+el commit, ejecute `npm run build` y publique `dist`. Las demás ramas generan
+deployments de preview.
 
 ### Despliegue manual de emergencia
 
 ```bash
 # (Solo la primera vez) crear el proyecto Pages
-npx wrangler pages project create clickclick-go --production-branch main
+npx wrangler pages project create clickclick-go-git --production-branch main
 
 # Definir el secreto administrativo (una vez, o para rotarlo)
-npx wrangler pages secret put ADMIN_SECRET_KEY --project-name clickclick-go
+npx wrangler pages secret put ADMIN_SECRET_KEY --project-name clickclick-go-git
 
 # Compilar y desplegar
 npm run build
-npx wrangler pages deploy dist --project-name clickclick-go --branch main
+npx wrangler pages deploy dist --project-name clickclick-go-git --branch main
 ```
 
 > Nota: `wrangler pages deploy` sobre un proyecto inexistente abre un prompt
