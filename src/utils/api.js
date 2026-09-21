@@ -5,23 +5,33 @@
 // automáticamente el JWT en las peticiones al mismo dominio, así que el cliente
 // NO necesita enviar ningún token manualmente.
 
-// Si Access ya expiró, una petición puede devolver una redirección al login.
-// fetch la sigue de forma opaca; detectamos ese caso y forzamos recarga para
-// que Access muestre su pantalla de login.
+// Si Access expiró, una petición devuelve una redirección al login. Las
+// peticiones administrativas usan redirect: 'manual' para impedir que fetch
+// intente seguir esa redirección hacia otro dominio y termine bloqueada por
+// CORS. La navegación principal sí puede abrir el login de Access.
 function handleAuthRedirect(res) {
   if (res.redirected || res.type === 'opaqueredirect') {
-    window.location.reload()
+    window.location.assign('/admin')
     throw new Error('Sesión expirada, reautenticando...')
   }
   if (res.status === 401 || res.status === 403) {
-    throw new Error('No autorizado. Vuelve a iniciar sesión.')
+    window.location.assign('/admin')
+    throw new Error('Sesión expirada, reautenticando...')
   }
+}
+
+async function adminFetch(resource, options = {}) {
+  const res = await fetch(resource, { ...options, redirect: 'manual' })
+  handleAuthRedirect(res)
+  return res
 }
 
 // Devuelve la identidad del usuario autenticado por Access (email, etc.)
 export async function getIdentity() {
   try {
-    const res = await fetch('/cdn-cgi/access/get-identity')
+    const res = await adminFetch('/admin/api/session', {
+      headers: { 'Cache-Control': 'no-cache' },
+    })
     if (!res.ok) return null
     return res.json()
   } catch {
@@ -47,12 +57,11 @@ export async function getBusiness(slug) {
 
 // Crea o edita un negocio (protegido por Access)
 export async function saveBusiness(business, { isEdit = false } = {}) {
-  const res = await fetch('/admin/api/save', {
+  const res = await adminFetch('/admin/api/save', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ ...business, isEdit }),
   })
-  handleAuthRedirect(res)
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `Error al guardar (${res.status})`)
   return data
@@ -69,11 +78,10 @@ export async function uploadMedia(file, slug, kind = 'media') {
   form.append('file', file)
   form.append('slug', slug || 'general')
   form.append('kind', kind)
-  const res = await fetch('/admin/api/upload', {
+  const res = await adminFetch('/admin/api/upload', {
     method: 'POST',
     body: form, // NO fijar Content-Type: el browser pone el boundary
   })
-  handleAuthRedirect(res)
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `Error al subir (${res.status})`)
   return data
@@ -81,12 +89,11 @@ export async function uploadMedia(file, slug, kind = 'media') {
 
 // Elimina un negocio (protegido por Access)
 export async function deleteBusiness(slug) {
-  const res = await fetch('/admin/api/delete', {
+  const res = await adminFetch('/admin/api/delete', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ slug }),
   })
-  handleAuthRedirect(res)
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `Error al eliminar (${res.status})`)
   return data
