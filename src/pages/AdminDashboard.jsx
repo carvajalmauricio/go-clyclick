@@ -38,27 +38,71 @@ const EMPTY_BUSINESS = {
 // si el navegador llegó hasta aquí, el usuario ya está autenticado.
 export default function AdminDashboard() {
   const [view, setView] = useState('list') // 'list' | 'edit'
+  const [identity, setIdentity] = useState(() => (isLocalDevelopment() ? {} : undefined))
+
+  useEffect(() => {
+    if (isLocalDevelopment()) return
+
+    let active = true
+    getIdentity()
+      .then((result) => {
+        if (active) setIdentity(result)
+      })
+      .catch(() => {
+        if (active) setIdentity(null)
+      })
+
+    return () => {
+      active = false
+    }
+  }, [])
+
+  // Cloudflare Access solo puede interceptar una petición HTTP. Esta barrera
+  // también evita mostrar el panel si React llegó a /admin mediante historial
+  // o navegación interna sin haber realizado una petición nueva al servidor.
+  if (identity === undefined) {
+    return <AdminGate message="Verificando sesión segura..." />
+  }
+
+  if (!identity) {
+    return <AdminGate />
+  }
 
   return view === 'list' ? (
-    <BusinessList setView={setView} />
+    <BusinessList setView={setView} email={identity.email || ''} />
   ) : (
     <EditorRouter view={view} setView={setView} />
   )
 }
 
+function isLocalDevelopment() {
+  return ['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)
+}
+
+function AdminGate({ message }) {
+  return (
+    <div className="min-h-screen bg-clickclick-dark text-white flex flex-col items-center justify-center gap-4 p-6 text-center">
+      <h1 className="text-xl font-bold text-clickclick-orange">ClickClick Go · Admin</h1>
+      {message ? (
+        <p className="text-gray-400">{message}</p>
+      ) : (
+        <>
+          <p className="max-w-sm text-gray-400">Necesitas autenticarte con Cloudflare Access para abrir el panel.</p>
+          <a href="/admin" className="rounded-lg bg-clickclick-orange px-5 py-2.5 font-semibold text-clickclick-dark">
+            Iniciar sesión
+          </a>
+        </>
+      )}
+    </div>
+  )
+}
+
 // --- Listado ---
-function BusinessList({ setView }) {
+function BusinessList({ setView, email }) {
   const [items, setItems] = useState(null)
   const [error, setError] = useState('')
   const [query, setQuery] = useState('')
   const [modal, setModal] = useState(null) // { business, tab: 'qr' | 'print' }
-  const [email, setEmail] = useState('')
-
-  useEffect(() => {
-    getIdentity()
-      .then((id) => setEmail(id?.email || ''))
-      .catch(() => {})
-  }, [])
 
   async function refresh() {
     setError('')

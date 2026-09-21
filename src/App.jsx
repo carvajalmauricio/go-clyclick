@@ -1,4 +1,4 @@
-import { Routes, Route, Link } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import PublicProfile from './pages/PublicProfile.jsx'
 import AdminDashboard from './pages/AdminDashboard.jsx'
 import NotFound from './pages/NotFound.jsx'
@@ -11,12 +11,12 @@ function Home() {
       </div>
       <h1 className="text-4xl font-bold text-clickclick-orange">ClickClick Go</h1>
       <p className="mt-3 text-gray-300">Conecta tu negocio con un toque</p>
-      <Link
-        to="/admin"
+      <a
+        href="/admin"
         className="mt-8 px-5 py-2.5 rounded-xl bg-clickclick-orange text-clickclick-dark font-semibold"
       >
         Panel de administración
-      </Link>
+      </a>
     </div>
   )
 }
