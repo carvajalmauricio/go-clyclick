@@ -6,6 +6,14 @@ import pichincha from '../../logos-bancarios/Banco-Pichincha.png'
 
 const logos = { deuna, guayaquil, produbanco, pacifico, pichincha }
 
-export default function BankLogo({ bank }) {
-  return <img src={logos[bank]} alt="" className="h-10 w-14 shrink-0 rounded-lg bg-white object-contain" />
+const BANK_NAMES = {
+  deuna: 'Deuna',
+  guayaquil: 'Banco Guayaquil',
+  produbanco: 'Produbanco',
+  pacifico: 'Banco del Pacífico',
+  pichincha: 'Banco Pichincha',
+}
+
+export default function BankLogo({ bank, label }) {
+  return <img src={logos[bank]} alt={label || BANK_NAMES[bank] || bank || ''} className="h-10 w-14 shrink-0 rounded-lg bg-white object-contain" />
 }

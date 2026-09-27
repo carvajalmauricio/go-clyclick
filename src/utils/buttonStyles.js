@@ -23,6 +23,21 @@ export const BUTTON_SHADOWS = [
   { value: 'solid', label: 'Sólida' },
 ]
 
+// Presentación de cada botón/enlace. Compartido por el editor, el perfil y la
+// validación al guardar (actionSettings.layout y links[].layout).
+export const BUTTON_LAYOUTS = [
+  { value: 'classic', label: 'Clásico' },
+  { value: 'featured', label: 'Destacado' },
+  { value: 'grid', label: 'Cuadrícula 2 col' },
+  { value: 'icon', label: 'Solo icono' },
+]
+
+export const DEFAULT_BUTTON_LAYOUT = 'classic'
+
+export function normalizeLayout(value) {
+  return BUTTON_LAYOUTS.some((option) => option.value === value) ? value : DEFAULT_BUTTON_LAYOUT
+}
+
 export const DEFAULT_BUTTON_STYLE = { shape: 'rounded', variant: 'filled', shadow: 'soft' }
 
 const pick = (options, value, fallback) => (options.some((option) => option.value === value) ? value : fallback)

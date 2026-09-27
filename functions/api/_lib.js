@@ -6,8 +6,11 @@ import { BANK_SECTION_ID, getProfileSections, normalizeBankAccounts, validateBan
 import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
-import { normalizeButtonStyle } from '../../src/utils/buttonStyles.js'
-import { BACKGROUND_PATTERNS } from '../../src/utils/themes.js'
+import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonStyles.js'
+import { LINK_ICONS, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
+import { BACKGROUND_PATTERNS, THEMES } from '../../src/utils/themes.js'
+import { normalizeFont } from '../../src/utils/fonts.js'
+import { LANGUAGES } from '../../src/utils/i18n.js'
 
 export const KEY_PREFIX = 'business:'
 export const INDEX_KEY = 'businesses:index'
@@ -21,6 +24,38 @@ export function json(data, status = 200, extraHeaders = {}) {
       ...extraHeaders,
     },
   })
+}
+
+// Restringe la URL de un enlace personalizado a esquemas http(s) seguros.
+// Un valor con esquema explícito distinto de http/https (mailto:, tel:, ftp:,
+// javascript:, data:, etc.) se descarta (devuelve ''). Los valores sin esquema
+// se conservan tal cual; buildCustomLinks les antepone https:// después.
+// Nota: los builders de redes sociales manejan mailto:/tel: donde corresponde
+// (email/teléfono); esta restricción solo aplica a los enlaces personalizados.
+export function sanitizeLinkUrl(value) {
+  const url = String(value || '').trim()
+  if (!url) return ''
+  // ¿Empieza con un esquema explícito "algo:"? (según RFC 3986: letra + [a-z0-9+.-])
+  // Ojo: una URL sin esquema con puerto explícito ("dominio.com:8080/x") también
+  // encaja con ese patrón. Para no descartar ese enlace legítimo, solo tratamos
+  // el valor como "con esquema" cuando lo que sigue a los dos puntos NO son
+  // dígitos (un puerto). Así "dominio.com:8080" se conserva y ensureHttp le
+  // antepone https://, mientras que javascript:/mailto:/data:/ftp:/etc. se vacían.
+  // Primero rechazamos esquemas peligrosos conocidos SIN importar lo que siga a
+  // los dos puntos, para no depender de que ensureHttp los neutralice después
+  // (defensa en profundidad). Cubre javascript:123, data:123, etc.
+  const dangerous = /^(javascript|data|vbscript|file|blob|about|mailto|tel|ftp):/i
+  if (dangerous.test(url)) return ''
+  // Luego, cualquier otro esquema explícito distinto de http(s) también se vacía,
+  // salvo el caso de una URL sin esquema con puerto ("dominio.com:8080/x"): ahí
+  // lo que sigue a los dos puntos son dígitos (un puerto), así que se conserva y
+  // ensureHttp le antepone https://.
+  const schemeMatch = url.match(/^([a-z][a-z0-9+.-]*):(?![0-9])/i)
+  if (schemeMatch) {
+    const scheme = schemeMatch[1].toLowerCase()
+    if (scheme !== 'http' && scheme !== 'https') return ''
+  }
+  return url
 }
 
 // Convierte un texto en un slug seguro para URL: "Pizzería Napolí!" -> "pizzeria-napoli"
@@ -247,12 +282,36 @@ export function normalizeBusiness(payload) {
           label: String(item.label || '').trim().slice(0, 80),
           enabled: item.enabled !== false,
           order: Number.isFinite(Number(item.order)) ? Number(item.order) : order,
-          layout: item.layout === 'featured' ? 'featured' : 'classic',
+          layout: normalizeLayout(item.layout),
           thumbnail: String(item.thumbnail || '').trim(),
           sectionId: String(item.sectionId || '').trim().slice(0, 80),
           animation: normalizeAnimation(item.animation),
           colors: normalizeButtonColors(item.colors),
         }))
+    : []
+
+  // Enlaces personalizados ilimitados (más allá de los 7 tipos fijos).
+  // Se descartan las entradas sin título y sin URL. Se limita a MAX_LINKS.
+  const MAX_LINKS = 50
+  const links = Array.isArray(payload.links)
+    ? payload.links
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => ({
+          id: String(item.id || `link-${Math.random().toString(36).slice(2, 10)}`).trim().slice(0, 80),
+          title: String(item.title || '').trim().slice(0, 80),
+          url: sanitizeLinkUrl(item.url).slice(0, 2048),
+          icon: normalizeLinkIcon(item.icon),
+          thumbnail: String(item.thumbnail || '').trim(),
+          enabled: item.enabled !== false,
+          order: Number.isFinite(Number(item.order)) ? Number(item.order) : 0,
+          layout: normalizeLayout(item.layout),
+          sectionId: String(item.sectionId || '').trim().slice(0, 80),
+          animation: normalizeAnimation(item.animation),
+          colors: normalizeButtonColors(item.colors),
+        }))
+        .filter((item) => item.title || item.url)
+        .slice(0, MAX_LINKS)
+        .map((item, order) => ({ ...item, order }))
     : []
 
   const sections = getProfileSections({ sections: Array.isArray(payload.sections)
@@ -278,6 +337,64 @@ export function normalizeBusiness(payload) {
 
   const buttonStyle = normalizeButtonStyle(payload.buttonStyle)
 
+  // Redes sociales: se normaliza cada handle contra la lista de claves válidas
+  // del catálogo SOCIAL_NETWORKS. Se descartan claves desconocidas. El objeto
+  // siempre existe. socialOrder guarda el orden elegido (solo claves válidas,
+  // sin duplicados) y socialPosition indica si la fila va arriba ('top', bajo
+  // el hero, por defecto) o abajo ('bottom') del bloque de acciones.
+  const socialInput = payload.social && typeof payload.social === 'object' ? payload.social : {}
+  const social = {}
+  for (const key of SOCIAL_NETWORK_KEYS) {
+    social[key] = String(socialInput[key] || '').trim()
+  }
+  const socialOrder = normalizeSocialOrder(payload.socialOrder ?? socialInput.order)
+  const socialPosition = normalizeSocialPosition(payload.socialPosition)
+
+  // #8 Fuente personalizada: se valida contra el catálogo (inválida -> '').
+  const font = normalizeFont(payload.font)
+
+  // #16 Modo claro/oscuro automático: booleano + par de temas claro/oscuro.
+  // Los ids se validan contra THEMES; los inválidos caen a valores sensatos.
+  const autoTheme = payload.autoTheme === true || payload.autoTheme === 'true'
+  const validThemeId = (value, fallback) =>
+    typeof value === 'string' && Object.prototype.hasOwnProperty.call(THEMES, value) ? value : fallback
+  const lightTheme = validThemeId(payload.lightTheme, 'minimal')
+  const darkTheme = validThemeId(payload.darkTheme, 'vibrant')
+
+  // #18 Multi-idioma: subconjunto de LANGUAGES sin duplicados; 'es' siempre
+  // presente y por defecto. Overrides por idioma solo para name/description/category.
+  const requestedLangs = Array.isArray(payload.languages) ? payload.languages : []
+  const languages = ['es', ...requestedLangs
+    .map((lang) => String(lang || '').toLowerCase().trim())
+    .filter((lang) => LANGUAGES.includes(lang) && lang !== 'es')]
+    .filter((lang, index, list) => list.indexOf(lang) === index)
+  const i18nInput = payload.i18n && typeof payload.i18n === 'object' ? payload.i18n : {}
+  const i18n = {}
+  for (const lang of LANGUAGES) {
+    if (lang === 'es') continue // el español vive en los campos raíz del negocio
+    const entry = i18nInput[lang]
+    if (!entry || typeof entry !== 'object') continue
+    const override = {
+      name: String(entry.name || '').trim(),
+      description: String(entry.description || '').trim(),
+      category: String(entry.category || '').trim(),
+    }
+    // Solo se conserva si el idioma está habilitado y aporta algún valor.
+    if (languages.includes(lang) && (override.name || override.description || override.category)) {
+      i18n[lang] = override
+    }
+  }
+
+  // #19 Puerta de edad / contenido sensible: enabled + minAge (clamp 0-99) + mensaje.
+  const ageGateInput = payload.ageGate && typeof payload.ageGate === 'object' ? payload.ageGate : {}
+  const rawMinAge = Number(ageGateInput.minAge)
+  const minAge = Number.isFinite(rawMinAge) ? Math.max(0, Math.min(99, Math.round(rawMinAge))) : 18
+  const ageGate = {
+    enabled: ageGateInput.enabled === true || ageGateInput.enabled === 'true',
+    minAge,
+    message: String(ageGateInput.message || '').trim().slice(0, 300),
+  }
+
   const business = {
     slug,
     name,
@@ -290,6 +407,17 @@ export function normalizeBusiness(payload) {
     // Slides que rotan en la tarjeta de presentación después del slide base
     heroSlides: normalizeHeroSlides(payload.heroSlides),
     theme: String(payload.theme || 'vibrant'),
+    // Fuente personalizada del perfil (#8)
+    font,
+    // Modo claro/oscuro automático (#16)
+    autoTheme,
+    lightTheme,
+    darkTheme,
+    // Multi-idioma ES/EN (#18)
+    languages,
+    i18n,
+    // Puerta de edad / contenido sensible (#19)
+    ageGate,
     background,
     buttonStyle,
     // Colores personalizados (solo se usan si theme === 'custom')
@@ -313,13 +441,11 @@ export function normalizeBusiness(payload) {
     email: String(payload.email || '').trim(),
     website: String(payload.website || '').trim(),
     // Redes
-    social: {
-      instagram: String(payload.social?.instagram || '').trim(),
-      tiktok: String(payload.social?.tiktok || '').trim(),
-      facebook: String(payload.social?.facebook || '').trim(),
-      linkedin: String(payload.social?.linkedin || '').trim(),
-    },
+    social,
+    socialOrder,
+    socialPosition,
     actionSettings,
+    links,
     bankAccounts: normalizeBankAccounts(payload.bankAccounts, sections),
     sections,
     updatedAt: Date.now(),

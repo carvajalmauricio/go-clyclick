@@ -1,32 +1,138 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import SocialLinkItem from './SocialLinkItem.jsx'
 import ShareMenu from './ShareMenu.jsx'
 import { resolveTheme, getBackgroundStyle } from '../utils/themes.js'
-import { buildActions, buildSocials } from '../utils/links.js'
+import { buildActions, buildSocials, normalizeSocialPosition } from '../utils/links.js'
 import { downloadVCard } from '../utils/vcard.js'
 import { getProfileSections } from '../utils/banking.js'
 import { getButtonColors } from '../utils/buttonColors.js'
 import BankLogo from './BankLogo.jsx'
 import BankAccountDialog from './BankAccountDialog.jsx'
 import { animationClass, innerAnimationClass } from '../utils/animations.js'
+import { addressFromMapsUrl } from '../utils/links.js'
+import { shareLink } from '../utils/clipboard.js'
+import CopyButton from './CopyButton.jsx'
 import HeroCarousel from './HeroCarousel.jsx'
 import { buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
+import { getFont, fontStylesheetUrl } from '../utils/fonts.js'
+import { t, LANGUAGE_LABELS } from '../utils/i18n.js'
+
+// Suscribe a prefers-color-scheme: dark (mismo patrón que usePrefersReducedMotion).
+// Devuelve true cuando el sistema pide modo oscuro. Reacciona a los cambios.
+function usePrefersDark() {
+  const query = '(prefers-color-scheme: dark)'
+  const [dark, setDark] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(query).matches)
+  useEffect(() => {
+    const media = window.matchMedia?.(query)
+    if (!media) return
+    const update = () => setDark(media.matches)
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
+  return dark
+}
+
+// Idiomas habilitados del negocio (siempre incluye 'es').
+function enabledLanguages(business) {
+  const langs = Array.isArray(business.languages) ? business.languages.filter((l) => l === 'es' || l === 'en') : []
+  return langs.includes('es') ? langs : ['es', ...langs]
+}
+
+// Aplica los overrides de idioma (name/description/category) sobre el negocio.
+// El español usa siempre los campos raíz; otros idiomas usan business.i18n[lang].
+function localizeBusiness(business, lang) {
+  if (lang === 'es') return business
+  const override = business.i18n?.[lang]
+  if (!override) return business
+  return {
+    ...business,
+    name: override.name || business.name,
+    description: override.description || business.description,
+    category: override.category || business.category,
+  }
+}
+
+// Inyecta el <link> del stylesheet de Google Fonts solo cuando hay fuente
+// seleccionada. Se elimina al desmontar o cambiar de fuente.
+function useProfileFont(fontValue) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const href = fontStylesheetUrl(fontValue)
+    if (!href) return
+    if (document.querySelector(`link[data-profile-font][href="${href}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = href
+    link.setAttribute('data-profile-font', fontValue)
+    document.head.appendChild(link)
+    return () => {
+      link.remove()
+    }
+  }, [fontValue])
+}
 
 // Vista de presentación del perfil de un negocio.
 // Se usa en la página pública y dentro del simulador móvil del admin.
-export default function ProfileView({ business, compact = false }) {
-  const theme = resolveTheme(business.theme, business.customColors)
+export default function ProfileView({ business: rawBusiness, compact = false }) {
+  const langs = enabledLanguages(rawBusiness)
+  const [lang, setLang] = useState('es')
+  const activeLang = langs.includes(lang) ? lang : 'es'
+  const business = localizeBusiness(rawBusiness, activeLang)
+
+  // #16 Modo claro/oscuro automático: cuando está activo, elige entre el tema
+  // claro y el oscuro configurados según prefers-color-scheme del sistema.
+  const prefersDark = usePrefersDark()
+  const themeId = rawBusiness.autoTheme
+    ? (prefersDark ? (rawBusiness.darkTheme || 'vibrant') : (rawBusiness.lightTheme || 'minimal'))
+    : business.theme
+
+  // #8 Fuente personalizada: carga el stylesheet solo si hay fuente elegida.
+  useProfileFont(rawBusiness.font)
+  const font = getFont(rawBusiness.font)
+
+  const theme = resolveTheme(themeId, business.customColors)
   const actions = buildActions(business)
   const socials = buildSocials(business)
+  const socialPosition = normalizeSocialPosition(business.socialPosition)
+  const socialsRow = socials.length > 0 && (
+    <div className={`flex flex-wrap justify-center gap-3 ${socialPosition === 'bottom' ? 'mt-6' : 'mt-5'}`}>
+      {socials.map((s) => (
+        <SocialLinkItem key={s.key} social={s} theme={theme} />
+      ))}
+    </div>
+  )
   const sections = getProfileSections(business)
   const background = business.background || { type: 'theme' }
 
   return (
     <div
       className={`${compact ? 'min-h-full' : 'min-h-screen'} profile-background relative w-full flex flex-col items-center overflow-hidden`}
-      style={{ ...getBackgroundStyle(theme, ['image', 'video'].includes(background.type) ? null : background), color: theme.text }}
+      style={{ ...getBackgroundStyle(theme, ['image', 'video'].includes(background.type) ? null : background), color: theme.text, ...(font ? { fontFamily: font.family } : {}) }}
     >
+      {langs.length > 1 && (
+        <div
+          className={`absolute z-20 flex items-center gap-1 rounded-full p-1 backdrop-blur-md ${compact ? 'left-3 top-3' : 'left-5 top-5'}`}
+          style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, border: `1px solid ${theme.border}` }}
+          role="group"
+          aria-label={t(activeLang, 'languageLabel')}
+        >
+          {langs.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLang(code)}
+              aria-pressed={activeLang === code}
+              className="rounded-full px-2.5 py-1 text-xs font-semibold transition"
+              style={activeLang === code
+                ? { background: theme.accent, color: theme.accentText }
+                : { color: theme.text, opacity: 0.7 }}
+            >
+              {LANGUAGE_LABELS[code] || code.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
       {['image', 'video'].includes(background.type) && background.url && (
         <>
           <div aria-hidden="true" className="absolute pointer-events-none" style={{ inset: -Math.max(0, Math.min(30, Number(background.blur) || 0)) * 2, filter: `blur(${Math.max(0, Math.min(30, Number(background.blur) || 0))}px)` }}>
@@ -44,18 +150,12 @@ export default function ProfileView({ business, compact = false }) {
         {/* Tarjeta de presentación: logo, nombre, categoría y descripción (con slides opcionales) */}
         <HeroCarousel business={business} theme={theme} compact={compact} />
 
-        {/* Redes sociales */}
-        {socials.length > 0 && (
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            {socials.map((s) => (
-              <SocialLinkItem key={s.key} social={s} theme={theme} />
-            ))}
-          </div>
-        )}
+        {/* Redes sociales (arriba, justo bajo el hero) */}
+        {socialPosition === 'top' && socialsRow}
 
         {/* Botones de acción */}
         <div className="mt-6 flex w-full flex-col gap-5">
-          <ActionGroup actions={actions.filter((action) => !action.sectionId)} business={business} theme={theme} />
+          <ActionGroup actions={actions.filter((action) => !action.sectionId)} business={business} theme={theme} lang={activeLang} />
           {sections.map((section) => {
             const grouped = actions.filter((action) => action.sectionId === section.id)
             if (!grouped.length) return null
@@ -64,17 +164,23 @@ export default function ProfileView({ business, compact = false }) {
                 <h2 className="mb-3 px-1 text-xs font-bold uppercase tracking-[.16em]" style={{ color: theme.subtext }}>
                   {section.title}
                 </h2>
-                <ActionGroup actions={grouped} business={business} theme={theme} />
+                <ActionGroup actions={grouped} business={business} theme={theme} lang={activeLang} />
               </section>
             )
           })}
         </div>
 
+        {/* Copiar con un toque (#12): teléfono y dirección cuando existen */}
+        <ContactCopyRow business={business} theme={theme} />
+
+        {/* Redes sociales (abajo, tras los botones de acción) */}
+        {socialPosition === 'bottom' && socialsRow}
+
         {/* Footer fijado al fondo (mt-auto lo empuja abajo) */}
         <footer className="mt-auto pt-10 w-full flex flex-col items-center gap-2">
           <ClickClickLogo color={theme.text} />
           <div className="text-center text-xs" style={{ color: theme.subtext }}>
-            Powered by <span style={{ color: theme.text, fontWeight: 600 }}>ClyClick</span> · Conecta tu negocio con un toque
+            {t(activeLang, 'poweredBy')} <span style={{ color: theme.text, fontWeight: 600 }}>ClyClick</span> · {t(activeLang, 'tagline')}
           </div>
         </footer>
       </div>
@@ -82,18 +188,105 @@ export default function ProfileView({ business, compact = false }) {
   )
 }
 
-function ActionGroup({ actions, business, theme }) {
-  if (!actions.length) return null
+// Fila de "copiar con un toque" (#12) para valores concretos: teléfono y
+// dirección. La dirección se deriva del enlace de Google Maps del negocio.
+// Solo se muestra si hay al menos un valor copiable. Etiquetas en español.
+function ContactCopyRow({ business, theme }) {
+  const phone = String(business.phone || '').trim()
+  const address = addressFromMapsUrl(business.mapsUrl)
+  if (!phone && !address) return null
+  const chipStyle = {
+    background: `color-mix(in srgb, ${theme.card} 82%, transparent)`,
+    color: theme.text,
+    border: `1px solid ${theme.border}`,
+  }
   return (
-    <div className="flex w-full flex-col gap-3">
-      {actions.map((action) => (
-        <ActionCard key={action.key} action={action} business={business} theme={theme} />
-      ))}
+    <div className="mt-5 flex w-full flex-wrap justify-center gap-2">
+      {phone && (
+        <CopyButton
+          value={phone}
+          label={phone}
+          ariaLabel={`Copiar teléfono ${phone}`}
+          iconSize={15}
+          className="max-w-full break-all rounded-full px-3.5 py-2 text-xs font-semibold backdrop-blur-md hover:scale-[1.03]"
+          style={chipStyle}
+        />
+      )}
+      {address && (
+        <CopyButton
+          value={address}
+          label={address}
+          ariaLabel={`Copiar dirección ${address}`}
+          iconSize={15}
+          className="max-w-full break-words rounded-full px-3.5 py-2 text-xs font-semibold backdrop-blur-md hover:scale-[1.03]"
+          style={chipStyle}
+        />
+      )}
     </div>
   )
 }
 
-function ActionCard({ action, business, theme }) {
+function ActionGroup({ actions, business, theme, lang = 'es' }) {
+  if (!actions.length) return null
+  // Agrupa acciones consecutivas con layout 'grid' dentro de una cuadrícula de
+  // 2 columnas; el resto (classic/featured/icon) mantiene el flujo apilado.
+  const chunks = []
+  for (const action of actions) {
+    const isGrid = action.layout === 'grid'
+    const last = chunks[chunks.length - 1]
+    if (isGrid && last?.grid) {
+      last.items.push(action)
+    } else {
+      chunks.push({ grid: isGrid, items: [action] })
+    }
+  }
+  return (
+    <div className="flex w-full flex-col gap-3">
+      {chunks.map((chunk, index) =>
+        chunk.grid ? (
+          <div key={`grid-${index}`} className="grid grid-cols-2 gap-3">
+            {chunk.items.map((action) => (
+              <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} />
+            ))}
+          </div>
+        ) : (
+          <ActionCard key={chunk.items[0].key} action={chunk.items[0]} business={business} theme={theme} lang={lang} />
+        )
+      )}
+    </div>
+  )
+}
+
+// Botón pequeño para compartir/copiar un enlace concreto de la tarjeta.
+// Usa la Web Share API con respaldo a copiar la URL, y muestra 'Copiado' de
+// forma transitoria (feedback seguro para prefers-reduced-motion).
+function ShareActionButton({ url, label, theme }) {
+  const [copied, setCopied] = useState(false)
+  async function onShare(event) {
+    // Evita disparar el enlace/botón contenedor de la tarjeta.
+    event.preventDefault()
+    event.stopPropagation()
+    const { copied: didCopy } = await shareLink({ title: label, url })
+    if (didCopy) {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={onShare}
+      aria-label={copied ? 'Enlace copiado' : `Compartir ${label || 'enlace'}`}
+      title={copied ? 'Copiado' : 'Compartir'}
+      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md motion-safe:transition hover:scale-105"
+      style={{ background: `color-mix(in srgb, ${theme.card} 82%, transparent)`, color: theme.text, border: `1px solid ${theme.border}` }}
+    >
+      <Icon name={copied ? 'copy' : 'share'} size={15} />
+    </button>
+  )
+}
+
+function ActionCard({ action, business, theme, lang = 'es' }) {
   const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
   const radius = buttonRadius(style.shape)
@@ -106,10 +299,12 @@ function ActionCard({ action, business, theme }) {
   const innerAnimation = innerAnimationClass(action.animation)
   const cardStyle = { background, color, border, borderRadius: radius, boxShadow: shadow }
 
-  const content = action.layout === 'featured' ? (
+  const layout = action.layout || 'classic'
+
+  const content = layout === 'featured' ? (
     <>
       {action.thumbnail ? (
-        <img src={action.thumbnail} alt="" className="aspect-video w-full object-cover" />
+        <img src={action.thumbnail} alt={action.label || ''} className="aspect-video w-full object-cover" />
       ) : (
         <div className="flex aspect-[2.4/1] w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
           <Icon name={action.icon} size={48} />
@@ -121,9 +316,22 @@ function ActionCard({ action, business, theme }) {
         <span aria-hidden="true">›</span>
       </div>
     </>
+  ) : layout === 'grid' ? (
+    <>
+      {action.thumbnail ? (
+        <img src={action.thumbnail} alt={action.label || ''} className="aspect-square w-full object-cover" />
+      ) : (
+        <div className="flex aspect-square w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
+          <Icon name={action.icon} size={40} />
+        </div>
+      )}
+      <span className="block px-3 py-2.5 text-center text-sm font-semibold">{action.label}</span>
+    </>
+  ) : layout === 'icon' ? (
+    <Icon name={action.icon} size={24} />
   ) : (
     <>
-      {action.bank ? <BankLogo bank={action.bank} /> : action.thumbnail ? <img src={action.thumbnail} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
+      {action.bank ? <BankLogo bank={action.bank} label={action.label} /> : action.thumbnail ? <img src={action.thumbnail} alt={action.label || ''} className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
       <span className="min-w-0 flex-1 break-words text-left">
         {action.label}
         {action.bankAccount?.number && <span className="mt-0.5 block text-xs opacity-75">{action.bankAccount.accountType === 'checking' ? 'Corriente' : 'Ahorros'} · {action.bankAccount.number.slice(-4)}</span>}
@@ -132,17 +340,33 @@ function ActionCard({ action, business, theme }) {
     </>
   )
 
-  const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} w-full font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
+  const layoutClass = layout === 'featured'
+    ? 'block overflow-hidden'
+    : layout === 'grid'
+      ? 'block overflow-hidden'
+      : layout === 'icon'
+        ? 'mx-auto flex h-14 w-14 items-center justify-center'
+        : 'flex min-h-14 items-center gap-3 px-4 py-3'
+  const needsAriaLabel = layout === 'icon'
+  const widthClass = layout === 'icon' ? '' : 'w-full'
+  const className = `${layoutClass} ${widthClass} font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
+  const ariaLabel = needsAriaLabel ? action.label : undefined
+  // Compartir por enlace (#12): solo para enlaces reales navegables (no #contact,
+  // no acciones que abren el diálogo de cuenta) y en layouts que no sean 'icon'
+  // (que debe mantenerse compacto). Se posiciona en la esquina de la tarjeta.
+  const isRealLink = Boolean(action.url) && action.url !== '#contact' && !action.isContact
+  const canShare = isRealLink && layout !== 'icon'
   return (
-    <div className={`w-full ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
+    <div className={`relative ${layout === 'icon' ? 'inline-flex' : 'w-full'} ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
       {action.bankAccount && !action.url ? (
-        <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" className={className} style={cardStyle}>{content}</button>
+        <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : action.isContact ? (
-        <button type="button" onClick={() => downloadVCard(business)} className={className} style={cardStyle}>{content}</button>
+        <button type="button" onClick={() => downloadVCard(business)} aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : (
-        <a href={action.url} target="_blank" rel="noopener noreferrer" className={className} style={cardStyle}>{content}</a>
+        <a href={action.url} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</a>
       )}
+      {canShare && <ShareActionButton url={action.url} label={action.label} theme={theme} />}
       {showAccount && <BankAccountDialog account={action.bankAccount} onClose={() => setShowAccount(false)} />}
     </div>
   )

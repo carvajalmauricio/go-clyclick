@@ -34,6 +34,8 @@ const EMPTY_BUSINESS = {
   email: '',
   website: '',
   social: { instagram: '', tiktok: '', facebook: '', linkedin: '' },
+  socialOrder: [],
+  socialPosition: 'top',
   actionSettings: [],
   sections: [{ id: BANK_SECTION_ID, title: 'Datos Bancarios' }],
   bankAccounts: [],

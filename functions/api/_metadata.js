@@ -1,5 +1,20 @@
+import { fontStylesheetUrl } from '../../src/utils/fonts.js'
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])
+}
+
+// Serializa un objeto para incrustarlo dentro de una etiqueta <script> sin que
+// su contenido pueda romper el contexto del script/HTML. Escapa '<', '>', '&'
+// y los separadores de línea Unicode U+2028/U+2029 (que rompen literales JS).
+// Así un dato con '</script>' o '<' queda neutralizado (p. ej. \u003c/script>).
+export function serializeBusinessScript(business) {
+  return JSON.stringify(business)
+    .replace(/</g, '\\u003c')
+    .replace(/>/g, '\\u003e')
+    .replace(/&/g, '\\u0026')
+    .replace(/\u2028/g, '\\u2028')
+    .replace(/\u2029/g, '\\u2029')
 }
 
 export function profileMetadata(business, origin) {
@@ -18,7 +33,11 @@ export function profileMetadata(business, origin) {
     ['name', 'twitter:card', 'summary'], ['name', 'twitter:title', title],
     ['name', 'twitter:description', description], ['name', 'twitter:image', image],
   ].map(([attribute, key, value]) => `<meta ${attribute}="${key}" content="${escapeHtml(value)}">`).join('')
-  return { title, description, html: `${tags}<link rel="canonical" href="${escapeHtml(url)}">` }
+  // Fuente personalizada (#8): se precarga en el primer pintado solo si hay una
+  // seleccionada, con display=swap. Si no hay, no se añade ningún <link>.
+  const fontHref = fontStylesheetUrl(business.font)
+  const fontLink = fontHref ? `<link rel="stylesheet" href="${escapeHtml(fontHref)}">` : ''
+  return { title, description, html: `${tags}<link rel="canonical" href="${escapeHtml(url)}">${fontLink}` }
 }
 
 export async function addProfileMetadata(response, request, env) {
@@ -28,10 +47,40 @@ export async function addProfileMetadata(response, request, env) {
     || !response.ok || !response.headers.get('Content-Type')?.includes('text/html') || !env.BUSINESSES) return response
   const raw = await env.BUSINESSES.get(`business:${match[1].toLowerCase()}`)
   if (!raw) return response
-  const metadata = profileMetadata(JSON.parse(raw), url.origin)
-  return new HTMLRewriter()
+  const business = JSON.parse(raw)
+  const metadata = profileMetadata(business, url.origin)
+  // Puerta de edad (#19): si está activa, NO se incrusta el negocio en el HTML.
+  // De lo contrario el contenido sensible viajaría en el código fuente antes de
+  // confirmar la edad (la puerta sería solo cosmética). Se incrusta solo la
+  // config no sensible de la puerta; el cliente difiere el fetch del negocio
+  // completo hasta que el visitante confirma la edad (ver PublicProfile.jsx).
+  const ageGated = business?.ageGate?.enabled === true
+  // Incrusta el negocio completo para que el cliente pinte el perfil al
+  // instante (sin fetch ni skeleton) al escanear el QR. El payload va escapado
+  // para no poder romper la etiqueta <script>.
+  // Para perfiles con puerta de edad se incrusta en su lugar SOLO la
+  // configuración no sensible de la puerta (window.__AGE_GATE__): idioma, tema
+  // y textos de la puerta. Así el cliente puede pintar la puerta al instante y
+  // difiere la carga del negocio completo hasta después de confirmar la edad,
+  // de modo que ningún dato sensible viaja al cliente antes de la confirmación.
+  const gateHint = ageGated
+    ? {
+        slug: business.slug,
+        theme: business.theme,
+        customColors: business.customColors,
+        languages: business.languages,
+        ageGate: business.ageGate,
+      }
+    : null
+  const dataScript = ageGated
+    ? `<script>window.__AGE_GATE__=${serializeBusinessScript(gateHint)};</script>`
+    : `<script>window.__BUSINESS__=${serializeBusinessScript(business)};</script>`
+  const rewriter = new HTMLRewriter()
     .on('title', { element(element) { element.setInnerContent(metadata.title) } })
     .on('meta[name="description"]', { element(element) { element.setAttribute('content', metadata.description) } })
     .on('head', { element(element) { element.append(metadata.html, { html: true }) } })
-    .transform(response)
+  if (dataScript) {
+    rewriter.on('body', { element(element) { element.append(dataScript, { html: true }) } })
+  }
+  return rewriter.transform(response)
 }

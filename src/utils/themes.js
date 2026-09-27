@@ -120,14 +120,20 @@ export const THEMES = {
     bg: '#fff7ed',
     bgGradient: 'linear-gradient(160deg, #fffbeb 0%, #ffedd5 100%)',
     pattern: 'geo',
-    text: '#1f2937',
-    subtext: '#57534e',
-    accent: '#7c3aed',
+    text: '#111827',
+    // Subtexto más oscuro (#44403c) para cumplir ~WCAG AA sobre el fondo claro.
+    subtext: '#44403c',
+    accent: '#6d28d9',
     accentText: '#ffffff',
     card: '#ffffff',
     border: '#e7e5e4',
   },
 }
+
+// Ids de tema por defecto usados por el modo claro/oscuro automático (#16).
+// Se eligen dos temas prediseñados con buen contraste en cada modo.
+export const DEFAULT_LIGHT_THEME = 'minimal'
+export const DEFAULT_DARK_THEME = 'vibrant'
 
 export const THEME_LIST = Object.values(THEMES)
 

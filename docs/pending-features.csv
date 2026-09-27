@@ -1,0 +1,12 @@
+priority,feature,description,status,notes
+Imprescindible,Analítica de visitas y clics,"Registrar y mostrar métricas de visitas al perfil y clics por enlace para entender qué funciona.",pendiente,Backlog #2
+Muy importante,Horario de atención con insignia Abierto ahora/Cerrado,"Configurar horario de atención y mostrar una insignia dinámica 'Abierto ahora' o 'Cerrado' según la hora local.",pendiente,Backlog #6
+Muy importante,Enlaces programados o destacados,"Mostrar un enlace solo entre dos fechas y permitir fijar o destacar un enlace en el perfil.",pendiente,Backlog #7
+Importante,Catálogo o menú con precios,"Tarjetas de producto con foto, nombre, precio y botón 'Pedir por WhatsApp' con mensaje prellenado.",pendiente,Backlog #10
+Importante,Captura de leads,"Formulario corto (nombre, teléfono o email) guardado y visible en el panel de administración.",pendiente,Backlog #11
+Importante,Cupones con cuenta regresiva,"Botón para copiar un cupón como 'CLY10 10% OFF' o mostrar una cuenta regresiva de un evento.",pendiente,Backlog #13
+Complementos,Insignia de verificado,"Mostrar una insignia de verificado junto al nombre del negocio.",pendiente,Backlog #14
+Complementos,Abrir en app (deep links),"Deep links desde navegadores in-app (Instagram/TikTok) hacia WhatsApp o Google Maps para abrir la app nativa.",pendiente,Backlog #15
+Complementos,Quitar Powered by ClyClick,"Permitir ocultar el sello 'Powered by ClyClick' como beneficio de un plan de pago.",pendiente,Backlog #20
+Opcional,Embeds dentro del perfil,"Reproducir contenido incrustado (YouTube/TikTok/Maps/Spotify) dentro del perfil sin salir de la pagina.",pendiente,Backlog #5 - diferido en FEAT-004
+Complementos,Control de acceso real para puerta de edad,"La puerta de edad (#19) difiere la carga de /api/business/:slug hasta confirmar (ningun dato sensible viaja antes de confirmar), pero el endpoint sigue siendo publico. Para control de acceso duro haria falta gating en el servidor (token/sesion).",pendiente,Nota de review v2 - la puerta es un freno de UX no control de acceso

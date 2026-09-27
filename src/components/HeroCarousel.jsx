@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getHeroSlides, normalizeInterval } from '../utils/heroSlides.js'
+import { descriptionColor } from '../utils/heroDescription.js'
+
+// Re-exporta el helper puro para compatibilidad con importadores previos.
+export { descriptionColor }
 
 const TRANSITION_MS = 500
 const SWIPE_THRESHOLD = 40
@@ -282,7 +286,7 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true }) {
         </span>
       )}
       {slide.description && (
-        <p className="mt-3 text-center text-sm" style={{ color: business.descriptionColor || theme.subtext }}>
+        <p className="mt-3 text-center text-sm" style={{ color: descriptionColor(business, theme) }}>
           {slide.description}
         </p>
       )}
