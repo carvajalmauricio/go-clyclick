@@ -15,11 +15,29 @@ function alreadyConfirmed(slug) {
   }
 }
 
+// Elige el idioma de la puerta de edad. La puerta aparece antes de que exista
+// el selector de idioma del perfil, así que respeta el idioma del visitante:
+// usa 'en' solo si está entre los idiomas habilitados del negocio y el
+// navegador prefiere inglés; en cualquier otro caso usa el idioma por defecto
+// del perfil ('es', o 'en' si es el único configurado). Sin coincidencias, 'es'.
+export function pickGateLanguage(languages) {
+  const enabled = Array.isArray(languages) ? languages.filter((l) => l === 'es' || l === 'en') : []
+  const hasEs = enabled.includes('es')
+  const hasEn = enabled.includes('en')
+  if (hasEn && !hasEs) return 'en'
+  if (hasEn && typeof navigator !== 'undefined') {
+    const prefers = String(navigator.language || '').toLowerCase()
+    if (prefers.startsWith('en')) return 'en'
+  }
+  return 'es'
+}
+
 // Puerta de edad / contenido sensible (#19). Bloquea el perfil detrás de una
 // confirmación a pantalla completa. Al confirmar, revela el perfil y lo recuerda
 // en sessionStorage. Al rechazar, redirige fuera del perfil.
-// Los textos usan el idioma por defecto del negocio (español, o inglés si es el
-// único configurado); son textos fijos vía i18n más el mensaje personalizado.
+// Los textos fijos vienen del diccionario i18n; el idioma lo decide
+// pickGateLanguage (respeta el idioma del visitante si el negocio lo habilita).
+// El mensaje personalizado del comerciante se muestra tal cual si existe.
 export default function AgeGate({ business, children }) {
   const gate = business?.ageGate
   const enabled = gate?.enabled === true
@@ -28,9 +46,7 @@ export default function AgeGate({ business, children }) {
 
   if (confirmed) return children
 
-  const lang = Array.isArray(business.languages) && !business.languages.includes('es') && business.languages.includes('en')
-    ? 'en'
-    : 'es'
+  const lang = pickGateLanguage(business.languages)
   const minAge = Number.isFinite(Number(gate?.minAge)) ? Number(gate.minAge) : 18
   const message = gate?.message?.trim() || t(lang, 'ageGateDefaultMessage')
   const theme = resolveTheme(business.theme, business.customColors)

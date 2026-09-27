@@ -26,6 +26,24 @@ export function json(data, status = 200, extraHeaders = {}) {
   })
 }
 
+// Restringe la URL de un enlace personalizado a esquemas http(s) seguros.
+// Un valor con esquema explícito distinto de http/https (mailto:, tel:, ftp:,
+// javascript:, data:, etc.) se descarta (devuelve ''). Los valores sin esquema
+// se conservan tal cual; buildCustomLinks les antepone https:// después.
+// Nota: los builders de redes sociales manejan mailto:/tel: donde corresponde
+// (email/teléfono); esta restricción solo aplica a los enlaces personalizados.
+export function sanitizeLinkUrl(value) {
+  const url = String(value || '').trim()
+  if (!url) return ''
+  // ¿Empieza con un esquema explícito "algo:"? (según RFC 3986: letra + [a-z0-9+.-])
+  const schemeMatch = url.match(/^([a-z][a-z0-9+.-]*):/i)
+  if (schemeMatch) {
+    const scheme = schemeMatch[1].toLowerCase()
+    if (scheme !== 'http' && scheme !== 'https') return ''
+  }
+  return url
+}
+
 // Convierte un texto en un slug seguro para URL: "Pizzería Napolí!" -> "pizzeria-napoli"
 export function slugify(input) {
   return String(input || '')
@@ -267,7 +285,7 @@ export function normalizeBusiness(payload) {
         .map((item) => ({
           id: String(item.id || `link-${Math.random().toString(36).slice(2, 10)}`).trim().slice(0, 80),
           title: String(item.title || '').trim().slice(0, 80),
-          url: String(item.url || '').trim().slice(0, 2048),
+          url: sanitizeLinkUrl(item.url).slice(0, 2048),
           icon: normalizeLinkIcon(item.icon),
           thumbnail: String(item.thumbnail || '').trim(),
           enabled: item.enabled !== false,

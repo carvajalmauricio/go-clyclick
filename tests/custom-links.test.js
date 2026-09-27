@@ -61,6 +61,50 @@ test('se descartan los enlaces sin título ni URL', () => {
   assert.deepEqual(result.business.links.map((l) => l.title), ['Válido', ''])
 })
 
+test('normalizeBusiness descarta esquemas de URL peligrosos en enlaces personalizados', () => {
+  const result = normalizeBusiness({
+    name: 'Negocio',
+    links: [
+      { title: 'JS', url: 'javascript:alert(1)' },
+      { title: 'Mailto', url: 'mailto:hola@ejemplo.com' },
+      { title: 'Tel', url: 'tel:+593999' },
+      { title: 'FTP', url: 'ftp://archivos.ejemplo.com' },
+      { title: 'Data', url: 'data:text/html,<script>alert(1)</script>' },
+      { title: 'HTTPS', url: 'https://ejemplo.com' },
+      { title: 'HTTP', url: 'http://ejemplo.com' },
+      { title: 'SinEsquema', url: 'ejemplo.com/x' },
+    ],
+  })
+  assert.equal(result.ok, true)
+  const byTitle = Object.fromEntries(result.business.links.map((l) => [l.title, l.url]))
+  // Los esquemas no http(s) quedan en blanco (el enlace se conserva por título).
+  assert.equal(byTitle['JS'], '')
+  assert.equal(byTitle['Mailto'], '')
+  assert.equal(byTitle['Tel'], '')
+  assert.equal(byTitle['FTP'], '')
+  assert.equal(byTitle['Data'], '')
+  // http(s) y valores sin esquema se conservan.
+  assert.equal(byTitle['HTTPS'], 'https://ejemplo.com')
+  assert.equal(byTitle['HTTP'], 'http://ejemplo.com')
+  assert.equal(byTitle['SinEsquema'], 'ejemplo.com/x')
+})
+
+test('buildCustomLinks nunca produce un href con esquema peligroso', () => {
+  // Simula un enlace ya normalizado: la URL peligrosa fue vaciada, así que no
+  // aparece en las acciones (queda excluido por no tener URL).
+  const normalized = normalizeBusiness({
+    name: 'Negocio',
+    links: [
+      { id: 'js', title: 'Malo', url: 'javascript:alert(1)', enabled: true },
+      { id: 'ok', title: 'Bueno', url: 'https://ejemplo.com', enabled: true },
+    ],
+  }).business
+  const built = buildCustomLinks(normalized)
+  assert.equal(built.length, 1)
+  assert.equal(built[0].url, 'https://ejemplo.com')
+  assert.ok(built.every((link) => /^https?:\/\//i.test(link.url)))
+})
+
 test('un layout inválido vuelve a classic', () => {
   const result = normalizeBusiness({
     name: 'Negocio',

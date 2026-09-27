@@ -28,8 +28,23 @@ export default function PublicProfile() {
     let active = true
     const inlined = readInlinedBusiness(slug)
     if (inlined) {
-      // Pintado instantáneo desde el dato incrustado; no volvemos a pedirlo.
+      // Pintado instantáneo desde el dato incrustado. Para no servir datos
+      // obsoletos si una capa de caché reprodujo un HTML viejo, revalidamos en
+      // segundo plano contra la API y actualizamos el estado solo si difiere.
       setState({ status: 'ready', business: inlined })
+      fetch(`/api/business/${encodeURIComponent(slug)}`)
+        .then(async (res) => {
+          if (!active || !res.ok) return
+          const fresh = await res.json()
+          // Reconciliación barata: comparamos la serialización. Si el servidor
+          // devuelve algo distinto al snapshot incrustado, adoptamos lo fresco.
+          if (fresh && fresh.slug === slug && JSON.stringify(fresh) !== JSON.stringify(inlined)) {
+            setState({ status: 'ready', business: fresh })
+          }
+        })
+        .catch(() => {
+          // Fallo de red en la revalidación: mantenemos el pintado instantáneo.
+        })
       return () => {
         active = false
       }

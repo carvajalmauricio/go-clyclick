@@ -162,6 +162,54 @@ test('addProfileMetadata escapa datos con </script> para no romper la etiqueta',
   }
 })
 
+test('addProfileMetadata NO incrusta el negocio cuando la puerta de edad está activa', async () => {
+  // Contenido sensible: el negocio no debe viajar en el HTML antes de confirmar
+  // la edad. El cliente cae a la ruta de fetch tras confirmar en la puerta.
+  const business = {
+    slug: 'adulto',
+    name: 'Bar Nocturno',
+    description: 'Un bar',
+    // Contenido sensible que NO debe viajar en el HTML: enlaces y datos internos.
+    links: [{ id: 'x', title: 'ContenidoSensibleSecreto', url: 'https://ejemplo.com', enabled: true }],
+    ageGate: { enabled: true, minAge: 18 },
+  }
+  const records = new Map([[`business:adulto`, JSON.stringify(business)]])
+  globalThis.HTMLRewriter = FakeHTMLRewriter
+  try {
+    const response = await addProfileMetadata(
+      makeHtmlResponse(),
+      new Request('https://example.test/adulto'),
+      makeEnv(records),
+    )
+    const html = await response.text()
+    // No hay payload incrustado ni el contenido sensible en el código fuente.
+    assert.doesNotMatch(html, /window\.__BUSINESS__/)
+    assert.doesNotMatch(html, /ContenidoSensibleSecreto/)
+    // Los metadatos (título) sí se aplican, para SEO/preview de la ruta.
+    assert.match(html, /Bar Nocturno/)
+  } finally {
+    delete globalThis.HTMLRewriter
+  }
+})
+
+test('addProfileMetadata SÍ incrusta el negocio cuando la puerta de edad está desactivada', async () => {
+  const business = { slug: 'normal', name: 'Café', description: 'Rico', ageGate: { enabled: false, minAge: 18 } }
+  const records = new Map([[`business:normal`, JSON.stringify(business)]])
+  globalThis.HTMLRewriter = FakeHTMLRewriter
+  try {
+    const response = await addProfileMetadata(
+      makeHtmlResponse(),
+      new Request('https://example.test/normal'),
+      makeEnv(records),
+    )
+    const html = await response.text()
+    assert.match(html, /window\.__BUSINESS__/)
+    assert.match(html, /"slug":"normal"/)
+  } finally {
+    delete globalThis.HTMLRewriter
+  }
+})
+
 test('addProfileMetadata no incrusta datos para rutas que no son perfiles', async () => {
   const records = new Map([[`business:cafe`, JSON.stringify({ slug: 'cafe', name: 'Café' })]])
   globalThis.HTMLRewriter = FakeHTMLRewriter

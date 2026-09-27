@@ -49,14 +49,21 @@ export async function addProfileMetadata(response, request, env) {
   if (!raw) return response
   const business = JSON.parse(raw)
   const metadata = profileMetadata(business, url.origin)
+  // Puerta de edad (#19): si está activa, NO se incrusta el negocio en el HTML.
+  // De lo contrario el contenido sensible viajaría en el código fuente antes de
+  // confirmar la edad (la puerta sería solo cosmética). Al omitir el payload, el
+  // cliente cae a la ruta de fetch, que solo se ejecuta tras confirmar la edad.
+  const ageGated = business?.ageGate?.enabled === true
   // Incrusta el negocio completo para que el cliente pinte el perfil al
   // instante (sin fetch ni skeleton) al escanear el QR. El payload va escapado
   // para no poder romper la etiqueta <script>.
-  const dataScript = `<script>window.__BUSINESS__=${serializeBusinessScript(business)};</script>`
-  return new HTMLRewriter()
+  const dataScript = ageGated ? '' : `<script>window.__BUSINESS__=${serializeBusinessScript(business)};</script>`
+  const rewriter = new HTMLRewriter()
     .on('title', { element(element) { element.setInnerContent(metadata.title) } })
     .on('meta[name="description"]', { element(element) { element.setAttribute('content', metadata.description) } })
     .on('head', { element(element) { element.append(metadata.html, { html: true }) } })
-    .on('body', { element(element) { element.append(dataScript, { html: true }) } })
-    .transform(response)
+  if (dataScript) {
+    rewriter.on('body', { element(element) { element.append(dataScript, { html: true }) } })
+  }
+  return rewriter.transform(response)
 }
