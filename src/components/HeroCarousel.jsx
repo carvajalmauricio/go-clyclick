@@ -1,5 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getHeroSlides, normalizeInterval } from '../utils/heroSlides.js'
+import { descriptionColor } from '../utils/heroDescription.js'
+
+// Re-exporta el helper puro para compatibilidad con importadores previos.
+export { descriptionColor }
 
 const TRANSITION_MS = 500
 const SWIPE_THRESHOLD = 40
@@ -288,15 +292,6 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true }) {
       )}
     </div>
   )
-}
-
-// Color de la descripción del hero. Con modo claro/oscuro automático (#16), un
-// color fijo elegido para un modo puede fallar el contraste en el otro; por eso
-// bajo autoTheme se ignora descriptionColor y se usa theme.subtext, que sí se
-// adapta al tema activo. Sin autoTheme se respeta el color fijo del comerciante.
-export function descriptionColor(business, theme) {
-  if (business?.autoTheme) return theme.subtext
-  return business?.descriptionColor || theme.subtext
 }
 
 function usePrefersReducedMotion() {
