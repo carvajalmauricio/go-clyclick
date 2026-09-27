@@ -3,7 +3,7 @@ import { Icon } from './Icons.jsx'
 import SocialLinkItem from './SocialLinkItem.jsx'
 import ShareMenu from './ShareMenu.jsx'
 import { resolveTheme, getBackgroundStyle } from '../utils/themes.js'
-import { buildActions, buildSocials } from '../utils/links.js'
+import { buildActions, buildSocials, normalizeSocialPosition } from '../utils/links.js'
 import { downloadVCard } from '../utils/vcard.js'
 import { getProfileSections } from '../utils/banking.js'
 import { getButtonColors } from '../utils/buttonColors.js'
@@ -19,6 +19,14 @@ export default function ProfileView({ business, compact = false }) {
   const theme = resolveTheme(business.theme, business.customColors)
   const actions = buildActions(business)
   const socials = buildSocials(business)
+  const socialPosition = normalizeSocialPosition(business.socialPosition)
+  const socialsRow = socials.length > 0 && (
+    <div className={`flex flex-wrap justify-center gap-3 ${socialPosition === 'bottom' ? 'mt-6' : 'mt-5'}`}>
+      {socials.map((s) => (
+        <SocialLinkItem key={s.key} social={s} theme={theme} />
+      ))}
+    </div>
+  )
   const sections = getProfileSections(business)
   const background = business.background || { type: 'theme' }
 
@@ -44,14 +52,8 @@ export default function ProfileView({ business, compact = false }) {
         {/* Tarjeta de presentación: logo, nombre, categoría y descripción (con slides opcionales) */}
         <HeroCarousel business={business} theme={theme} compact={compact} />
 
-        {/* Redes sociales */}
-        {socials.length > 0 && (
-          <div className="mt-5 flex flex-wrap justify-center gap-3">
-            {socials.map((s) => (
-              <SocialLinkItem key={s.key} social={s} theme={theme} />
-            ))}
-          </div>
-        )}
+        {/* Redes sociales (arriba, justo bajo el hero) */}
+        {socialPosition === 'top' && socialsRow}
 
         {/* Botones de acción */}
         <div className="mt-6 flex w-full flex-col gap-5">
@@ -69,6 +71,9 @@ export default function ProfileView({ business, compact = false }) {
             )
           })}
         </div>
+
+        {/* Redes sociales (abajo, tras los botones de acción) */}
+        {socialPosition === 'bottom' && socialsRow}
 
         {/* Footer fijado al fondo (mt-auto lo empuja abajo) */}
         <footer className="mt-auto pt-10 w-full flex flex-col items-center gap-2">

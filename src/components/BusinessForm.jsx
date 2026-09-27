@@ -6,8 +6,8 @@ import BankAccountManager from './BankAccountManager.jsx'
 import HeroSlidesManager from './HeroSlidesManager.jsx'
 import { uploadLogo } from '../utils/api.js'
 import { resolveTheme, THEME_LIST } from '../utils/themes.js'
-import { getActionSettings } from '../utils/links.js'
-import { Field, FileButton, SectionCard, SubHeading, inputCls } from './admin/ui.jsx'
+import { getActionSettings, buildSocials, SOCIAL_NETWORKS, SOCIAL_POSITIONS, normalizeSocialPosition, normalizeSocialOrder } from '../utils/links.js'
+import { Field, FileButton, IconButton, SectionCard, SubHeading, inputCls } from './admin/ui.jsx'
 
 // Secciones del formulario. El editor las usa también para la navegación rápida.
 export const FORM_SECTIONS = [
@@ -31,6 +31,17 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
   const set = (field) => (e) => onChange({ [field]: e.target.value })
   const setSocial = (field) => (e) =>
     onChange({ social: { ...(b.social || {}), [field]: e.target.value } })
+
+  // Orden efectivo de las redes activas (para reordenar en el editor). Se basa
+  // en buildSocials, que ya respeta socialOrder y filtra las redes con valor.
+  const enabledSocials = buildSocials(b)
+  const moveSocial = (index, dir) => {
+    const keys = enabledSocials.map((s) => s.key)
+    const target = index + dir
+    if (target < 0 || target >= keys.length) return
+    ;[keys[index], keys[target]] = [keys[target], keys[index]]
+    onChange({ socialOrder: normalizeSocialOrder(keys) })
+  }
 
   async function onLogoFile(e) {
     const file = e.target.files?.[0]
@@ -194,19 +205,50 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
         </div>
         <SubHeading>Redes sociales</SubHeading>
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Instagram (usuario o URL)">
-            <input className={inputCls} value={b.social?.instagram || ''} onChange={setSocial('instagram')} placeholder="minegocio" />
-          </Field>
-          <Field label="TikTok (usuario o URL)">
-            <input className={inputCls} value={b.social?.tiktok || ''} onChange={setSocial('tiktok')} placeholder="minegocio" />
-          </Field>
-          <Field label="Facebook (usuario o URL)">
-            <input className={inputCls} value={b.social?.facebook || ''} onChange={setSocial('facebook')} placeholder="minegocio" />
-          </Field>
-          <Field label="LinkedIn (usuario, company/nombre o URL)">
-            <input className={inputCls} value={b.social?.linkedin || ''} onChange={setSocial('linkedin')} placeholder="company/minegocio" />
-          </Field>
+          {SOCIAL_NETWORKS.map((network) => (
+            <Field key={network.key} label={`${network.label} (usuario o URL)`}>
+              <input
+                className={inputCls}
+                value={b.social?.[network.key] || ''}
+                onChange={setSocial(network.key)}
+                placeholder={network.placeholder}
+              />
+            </Field>
+          ))}
         </div>
+        <SubHeading>Posición de las redes</SubHeading>
+        <Field label="¿Dónde se muestran los iconos de redes?" hint="Arriba: justo debajo de la tarjeta de presentación. Abajo: después de los botones de acción.">
+          <select
+            className={inputCls}
+            value={normalizeSocialPosition(b.socialPosition)}
+            onChange={(e) => onChange({ socialPosition: e.target.value })}
+          >
+            {SOCIAL_POSITIONS.map((position) => (
+              <option key={position} value={position}>
+                {position === 'top' ? 'Arriba del perfil (bajo la presentación)' : 'Abajo del perfil (tras los botones)'}
+              </option>
+            ))}
+          </select>
+        </Field>
+        {enabledSocials.length > 1 && (
+          <>
+            <SubHeading>Orden de las redes</SubHeading>
+            <ul className="flex flex-col gap-2">
+              {enabledSocials.map((social, index) => (
+                <li
+                  key={social.key}
+                  className="flex items-center gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2"
+                >
+                  <span className="min-w-0 flex-1 truncate text-sm text-gray-200">
+                    {SOCIAL_NETWORKS.find((n) => n.key === social.key)?.label || social.key}
+                  </span>
+                  <IconButton icon="chevron-up" label="Subir" onClick={() => moveSocial(index, -1)} disabled={index === 0} />
+                  <IconButton icon="chevron-down" label="Bajar" onClick={() => moveSocial(index, 1)} disabled={index === enabledSocials.length - 1} />
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </SectionCard>
 
       <SectionCard {...card('design')}>

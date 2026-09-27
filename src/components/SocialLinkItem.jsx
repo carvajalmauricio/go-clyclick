@@ -7,7 +7,7 @@ export default function SocialLinkItem({ social, theme }) {
       href={social.url}
       target="_blank"
       rel="noopener noreferrer"
-      aria-label={social.key}
+      aria-label={social.label || social.key}
       className="flex items-center justify-center rounded-full transition-transform hover:scale-110"
       style={{
         width: 46,

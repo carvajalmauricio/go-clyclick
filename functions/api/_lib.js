@@ -7,7 +7,7 @@ import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
 import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonStyles.js'
-import { LINK_ICONS, normalizeLinkIcon } from '../../src/utils/links.js'
+import { LINK_ICONS, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
 import { BACKGROUND_PATTERNS } from '../../src/utils/themes.js'
 
 export const KEY_PREFIX = 'business:'
@@ -303,6 +303,19 @@ export function normalizeBusiness(payload) {
 
   const buttonStyle = normalizeButtonStyle(payload.buttonStyle)
 
+  // Redes sociales: se normaliza cada handle contra la lista de claves válidas
+  // del catálogo SOCIAL_NETWORKS. Se descartan claves desconocidas. El objeto
+  // siempre existe. socialOrder guarda el orden elegido (solo claves válidas,
+  // sin duplicados) y socialPosition indica si la fila va arriba ('top', bajo
+  // el hero, por defecto) o abajo ('bottom') del bloque de acciones.
+  const socialInput = payload.social && typeof payload.social === 'object' ? payload.social : {}
+  const social = {}
+  for (const key of SOCIAL_NETWORK_KEYS) {
+    social[key] = String(socialInput[key] || '').trim()
+  }
+  const socialOrder = normalizeSocialOrder(payload.socialOrder ?? socialInput.order)
+  const socialPosition = normalizeSocialPosition(payload.socialPosition)
+
   const business = {
     slug,
     name,
@@ -338,12 +351,9 @@ export function normalizeBusiness(payload) {
     email: String(payload.email || '').trim(),
     website: String(payload.website || '').trim(),
     // Redes
-    social: {
-      instagram: String(payload.social?.instagram || '').trim(),
-      tiktok: String(payload.social?.tiktok || '').trim(),
-      facebook: String(payload.social?.facebook || '').trim(),
-      linkedin: String(payload.social?.linkedin || '').trim(),
-    },
+    social,
+    socialOrder,
+    socialPosition,
     actionSettings,
     links,
     bankAccounts: normalizeBankAccounts(payload.bankAccounts, sections),

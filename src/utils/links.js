@@ -66,9 +66,120 @@ export function linkedinUrl(handle) {
   return `https://linkedin.com/company/${h.replace(/^@/, '')}`
 }
 
+export function youtubeUrl(handle) {
+  if (!handle) return ''
+  const h = String(handle).trim()
+  if (/^https?:\/\//i.test(h)) return h
+  // Acepta "@canal", "canal", "c/nombre", "channel/UC...", "user/nombre"
+  if (h.startsWith('@')) return `https://youtube.com/${h}`
+  if (/^(c|channel|user)\//i.test(h)) return `https://youtube.com/${h}`
+  return `https://youtube.com/@${h}`
+}
+
+export function xUrl(handle) {
+  if (!handle) return ''
+  const h = String(handle).replace(/^@/, '').trim()
+  if (/^https?:\/\//i.test(h)) return h
+  return `https://x.com/${h}`
+}
+
+export function threadsUrl(handle) {
+  if (!handle) return ''
+  const h = String(handle).replace(/^@/, '').trim()
+  if (/^https?:\/\//i.test(h)) return h
+  return `https://threads.net/@${h}`
+}
+
+export function pinterestUrl(handle) {
+  if (!handle) return ''
+  const h = String(handle).replace(/^@/, '').trim()
+  if (/^https?:\/\//i.test(h)) return h
+  return `https://pinterest.com/${h}`
+}
+
+export function telegramUrl(handle) {
+  if (!handle) return ''
+  const h = String(handle).replace(/^@/, '').trim()
+  if (/^https?:\/\//i.test(h)) return h
+  if (/^t\.me\//i.test(h)) return `https://${h}`
+  return `https://t.me/${h}`
+}
+
+export function spotifyUrl(handle) {
+  if (!handle) return ''
+  const h = String(handle).trim()
+  if (/^https?:\/\//i.test(h)) return h
+  if (/^spotify:/i.test(h)) return h
+  // Acepta "artist/ID", "user/ID"; si no trae prefijo, asume perfil de artista
+  if (/^(artist|user|show|playlist|album)\//i.test(h)) return `https://open.spotify.com/${h}`
+  return `https://open.spotify.com/artist/${h}`
+}
+
+export function emailUrl(value) {
+  if (!value) return ''
+  const v = String(value).trim()
+  if (/^mailto:/i.test(v)) return v
+  return `mailto:${v}`
+}
+
+export function phoneUrl(value) {
+  if (!value) return ''
+  const v = String(value).trim()
+  if (/^tel:/i.test(v)) return v
+  // Conserva el prefijo + y los dígitos
+  const cleaned = v.replace(/[^\d+]/g, '')
+  if (!cleaned) return ''
+  return `tel:${cleaned}`
+}
+
 export function ensureHttp(url) {
   if (!url) return ''
   return /^https?:\/\//i.test(url) ? url : `https://${url}`
+}
+
+// Catálogo compartido de redes sociales. El orden define el orden por defecto
+// en el editor y en el perfil. Cada entrada expone: key, label, icon (case en
+// Icons.jsx), buildUrl (a partir del valor crudo) y placeholder para el editor.
+export const SOCIAL_NETWORKS = [
+  { key: 'instagram', label: 'Instagram', icon: 'instagram', buildUrl: instagramUrl, placeholder: 'minegocio' },
+  { key: 'tiktok', label: 'TikTok', icon: 'tiktok', buildUrl: tiktokUrl, placeholder: 'minegocio' },
+  { key: 'facebook', label: 'Facebook', icon: 'facebook', buildUrl: facebookUrl, placeholder: 'minegocio' },
+  { key: 'linkedin', label: 'LinkedIn', icon: 'linkedin', buildUrl: linkedinUrl, placeholder: 'company/minegocio' },
+  { key: 'youtube', label: 'YouTube', icon: 'youtube', buildUrl: youtubeUrl, placeholder: '@micanal' },
+  { key: 'x', label: 'X (Twitter)', icon: 'x', buildUrl: xUrl, placeholder: 'minegocio' },
+  { key: 'threads', label: 'Threads', icon: 'threads', buildUrl: threadsUrl, placeholder: 'minegocio' },
+  { key: 'pinterest', label: 'Pinterest', icon: 'pinterest', buildUrl: pinterestUrl, placeholder: 'minegocio' },
+  { key: 'telegram', label: 'Telegram', icon: 'telegram', buildUrl: telegramUrl, placeholder: 'minegocio' },
+  { key: 'spotify', label: 'Spotify', icon: 'spotify', buildUrl: spotifyUrl, placeholder: 'artist/ID' },
+  { key: 'email', label: 'Email', icon: 'email', buildUrl: emailUrl, placeholder: 'hola@negocio.com' },
+  { key: 'phone', label: 'Teléfono', icon: 'phone', buildUrl: phoneUrl, placeholder: '+593999999999' },
+]
+
+// Lista de claves de red social válidas (para normalización en _lib.js).
+export const SOCIAL_NETWORK_KEYS = SOCIAL_NETWORKS.map((network) => network.key)
+
+const SOCIAL_NETWORK_MAP = new Map(SOCIAL_NETWORKS.map((network) => [network.key, network]))
+
+// Posiciones válidas para la fila de redes sociales respecto al hero.
+export const SOCIAL_POSITIONS = ['top', 'bottom']
+
+// Normaliza la posición de las redes; 'top' (bajo el hero) por defecto.
+export function normalizeSocialPosition(value) {
+  return SOCIAL_POSITIONS.includes(value) ? value : 'top'
+}
+
+// Normaliza un array de orden de redes: solo claves válidas, sin duplicados.
+export function normalizeSocialOrder(order) {
+  if (!Array.isArray(order)) return []
+  const seen = new Set()
+  const out = []
+  for (const key of order) {
+    if (SOCIAL_NETWORK_MAP.has(key) && !seen.has(key)) {
+      seen.add(key)
+      out.push(key)
+    }
+  }
+  return out
 }
 
 export const ACTION_DEFINITIONS = [
@@ -158,13 +269,29 @@ export function buildCustomLinks(business) {
     }))
 }
 
-// Redes sociales activas
+// Redes sociales activas. Itera el catálogo SOCIAL_NETWORKS, incluye solo las
+// redes con valor y resuelve su URL con el builder correspondiente. Respeta el
+// orden explícito (business.socialOrder o business.social.order) si existe;
+// de lo contrario usa el orden del catálogo. Compatible con perfiles antiguos
+// que solo traen las 4 redes originales.
 export function buildSocials(business) {
   const s = (business && business.social) || {}
+  const explicitOrder = normalizeSocialOrder(
+    (business && business.socialOrder) || s.order || []
+  )
+  // Primero las redes según el orden explícito, luego el resto en orden de catálogo.
+  const orderedKeys = [
+    ...explicitOrder,
+    ...SOCIAL_NETWORK_KEYS.filter((key) => !explicitOrder.includes(key)),
+  ]
   const out = []
-  if (s.instagram) out.push({ key: 'instagram', url: instagramUrl(s.instagram) })
-  if (s.tiktok) out.push({ key: 'tiktok', url: tiktokUrl(s.tiktok) })
-  if (s.facebook) out.push({ key: 'facebook', url: facebookUrl(s.facebook) })
-  if (s.linkedin) out.push({ key: 'linkedin', url: linkedinUrl(s.linkedin) })
+  for (const key of orderedKeys) {
+    const value = s[key]
+    if (!value) continue
+    const network = SOCIAL_NETWORK_MAP.get(key)
+    const url = network.buildUrl(value)
+    if (!url) continue
+    out.push({ key, url, label: network.label })
+  }
   return out
 }
