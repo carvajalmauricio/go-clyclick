@@ -1,9 +1,15 @@
+import { useState } from 'react'
 import { Icon } from './Icons.jsx'
 import SocialLinkItem from './SocialLinkItem.jsx'
 import ShareMenu from './ShareMenu.jsx'
 import { resolveTheme, getBackgroundStyle } from '../utils/themes.js'
 import { buildActions, buildSocials } from '../utils/links.js'
 import { downloadVCard } from '../utils/vcard.js'
+import { getProfileSections } from '../utils/banking.js'
+import { getButtonColors } from '../utils/buttonColors.js'
+import BankLogo from './BankLogo.jsx'
+import BankAccountDialog from './BankAccountDialog.jsx'
+import { animationClass } from '../utils/animations.js'
 
 // Vista de presentación del perfil de un negocio.
 // Se usa en la página pública y dentro del simulador móvil del admin.
@@ -11,7 +17,7 @@ export default function ProfileView({ business, compact = false }) {
   const theme = resolveTheme(business.theme, business.customColors)
   const actions = buildActions(business)
   const socials = buildSocials(business)
-  const sections = Array.isArray(business.sections) ? business.sections : []
+  const sections = getProfileSections(business)
   const background = business.background || { type: 'theme' }
 
   const initials = (business.name || '?')
@@ -121,13 +127,15 @@ function ActionGroup({ actions, business, theme }) {
 }
 
 function ActionCard({ action, business, theme }) {
+  const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
   const radius = style.shape === 'square' ? 8 : style.shape === 'pill' ? 999 : 16
-  const background = style.variant === 'outline' ? 'transparent' : style.variant === 'glass' ? `${theme.card}bb` : action.primary ? theme.accent : theme.card
-  const color = style.variant === 'outline' ? theme.text : action.primary ? theme.accentText : theme.text
-  const border = style.variant === 'outline' ? `2px solid ${theme.text}` : `1px solid ${theme.border}`
+  const colors = getButtonColors(action, theme, style)
+  const background = colors.background
+  const color = colors.text
+  const border = `${style.variant === 'outline' ? 2 : 1}px solid ${colors.border}`
   const shadow = style.shadow === 'solid' ? `5px 5px 0 ${theme.border}` : style.shadow === 'none' ? 'none' : '0 8px 24px rgba(0,0,0,.14)'
-  const animation = action.animation === 'pulse' ? 'profile-action-pulse' : action.animation === 'bounce' ? 'profile-action-bounce' : ''
+  const animation = animationClass(action.animation)
   const cardStyle = { background, color, border, borderRadius: radius, boxShadow: shadow }
 
   const content = action.layout === 'featured' ? (
@@ -147,8 +155,11 @@ function ActionCard({ action, business, theme }) {
     </>
   ) : (
     <>
-      {action.thumbnail ? <img src={action.thumbnail} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
-      <span className="flex-1 text-left">{action.label}</span>
+      {action.bank ? <BankLogo bank={action.bank} /> : action.thumbnail ? <img src={action.thumbnail} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
+      <span className="min-w-0 flex-1 break-words text-left">
+        {action.label}
+        {action.bankAccount?.number && <span className="mt-0.5 block text-xs opacity-75">{action.bankAccount.accountType === 'checking' ? 'Corriente' : 'Ahorros'} · {action.bankAccount.number.slice(-4)}</span>}
+      </span>
       <span aria-hidden="true" className="opacity-60">›</span>
     </>
   )
@@ -156,12 +167,15 @@ function ActionCard({ action, business, theme }) {
   const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} w-full font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015]`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
   return (
-    <div className={`w-full ${animation}`}>
-      {action.isContact ? (
+    <div className={`w-full ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
+      {action.bankAccount && !action.url ? (
+        <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" className={className} style={cardStyle}>{content}</button>
+      ) : action.isContact ? (
         <button type="button" onClick={() => downloadVCard(business)} className={className} style={cardStyle}>{content}</button>
       ) : (
         <a href={action.url} target="_blank" rel="noopener noreferrer" className={className} style={cardStyle}>{content}</a>
       )}
+      {showAccount && <BankAccountDialog account={action.bankAccount} onClose={() => setShowAccount(false)} />}
     </div>
   )
 }

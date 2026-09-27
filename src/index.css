@@ -38,21 +38,27 @@ body {
 }
 @keyframes profilePulse {
   0%, 100% { transform: scale(1); }
-  50% { transform: scale(1.025); }
+  50% { transform: scale(var(--profile-pulse-scale, 1.035)); }
 }
 @keyframes profileBounce {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-4px); }
+  50% { transform: translateY(var(--profile-float-distance, -6px)); }
+}
+@keyframes profileGlow {
+  0%, 100% { box-shadow: 0 0 0 0 transparent; }
+  50% {
+    box-shadow: 0 0 var(--profile-glow-blur, 20px) var(--profile-glow-spread, 3px)
+      color-mix(in srgb, var(--profile-action-glow, #f49120) 65%, transparent);
+  }
 }
 .profile-action-pulse { animation: profilePulse 2.2s ease-in-out infinite; }
-.profile-action-bounce { animation: profileBounce 1.8s ease-in-out infinite; }
-@keyframes profileEmphasis {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.78; }
-}
+.profile-action-bounce { animation: profileBounce 2.6s ease-in-out infinite; }
+.profile-action-glow { animation: profileGlow 2.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  /* Mantener el énfasis elegido sin desplazar ni escalar el botón. */
-  .profile-action-pulse, .profile-action-bounce { animation-name: profileEmphasis; }
+  /* Reducir amplitud y velocidad sin reemplazar los tres efectos por uno solo. */
+  .profile-action-pulse { --profile-pulse-scale: 1.008; animation-duration: 4s; }
+  .profile-action-bounce { --profile-float-distance: -1.5px; animation-duration: 4.4s; }
+  .profile-action-glow { --profile-glow-blur: 8px; --profile-glow-spread: 1px; animation-duration: 4.8s; }
 }
 
 /* ---------------------------------------------------------------------------

@@ -2,6 +2,10 @@
 // Utilidades compartidas por las Pages Functions de ClickClick Go
 // ---------------------------------------------------------------------------
 
+import { BANK_SECTION_ID, getProfileSections, normalizeBankAccounts, validateBankAccounts } from '../../src/utils/banking.js'
+import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
+import { normalizeAnimation } from '../../src/utils/animations.js'
+
 export const KEY_PREFIX = 'business:'
 export const INDEX_KEY = 'businesses:index'
 
@@ -229,6 +233,8 @@ export function normalizeBusiness(payload) {
   }
 
   const allowedActions = ['whatsapp', 'review', 'maps', 'waze', 'menu', 'website', 'contact']
+  const bankError = validateBankAccounts(payload.bankAccounts)
+  if (bankError) return { ok: false, error: bankError }
   const actionSettings = Array.isArray(payload.actionSettings)
     ? payload.actionSettings
         .filter((item) => item && allowedActions.includes(item.type))
@@ -241,16 +247,17 @@ export function normalizeBusiness(payload) {
           layout: item.layout === 'featured' ? 'featured' : 'classic',
           thumbnail: String(item.thumbnail || '').trim(),
           sectionId: String(item.sectionId || '').trim().slice(0, 80),
-          animation: ['pulse', 'bounce'].includes(item.animation) ? item.animation : 'none',
+          animation: normalizeAnimation(item.animation),
+          colors: normalizeButtonColors(item.colors),
         }))
     : []
 
-  const sections = Array.isArray(payload.sections)
-    ? payload.sections.slice(0, 12).map((section, index) => ({
+  const sections = getProfileSections({ sections: Array.isArray(payload.sections)
+    ? payload.sections.filter((section) => section && typeof section === 'object').slice(0, 13).map((section, index) => ({
         id: String(section?.id || `section-${index}`).trim().slice(0, 80),
-        title: String(section?.title || '').trim().slice(0, 60),
+        title: String(section?.title || (section?.id === BANK_SECTION_ID ? 'Datos Bancarios' : '')).trim().slice(0, 60),
       })).filter((section) => section.title)
-    : []
+    : [] })
 
   const background = payload.background && typeof payload.background === 'object'
     ? {
@@ -313,6 +320,7 @@ export function normalizeBusiness(payload) {
       linkedin: String(payload.social?.linkedin || '').trim(),
     },
     actionSettings,
+    bankAccounts: normalizeBankAccounts(payload.bankAccounts, sections),
     sections,
     updatedAt: Date.now(),
     createdAt: Number(payload.createdAt) || Date.now(),

@@ -3,6 +3,7 @@ import BusinessForm from '../components/BusinessForm.jsx'
 import PhoneMockup from '../components/PhoneMockup.jsx'
 import QRCodeStudio from '../components/QRCodeStudio.jsx'
 import PrintableDisplay from '../components/PrintableDisplay.jsx'
+import { BANK_SECTION_ID, validateBankAccounts } from '../utils/banking.js'
 import {
   getIdentity,
   listBusinesses,
@@ -31,7 +32,8 @@ const EMPTY_BUSINESS = {
   website: '',
   social: { instagram: '', tiktok: '', facebook: '', linkedin: '' },
   actionSettings: [],
-  sections: [],
+  sections: [{ id: BANK_SECTION_ID, title: 'Datos Bancarios' }],
+  bankAccounts: [],
 }
 
 // El acceso a /admin lo protege Cloudflare Access (Google + OTP) ANTES de que
@@ -324,6 +326,11 @@ function Editor({ isEdit, slug, onDone }) {
     setError('')
     if (!business.name.trim()) {
       setError('El nombre es obligatorio')
+      return
+    }
+    const bankError = validateBankAccounts(business.bankAccounts)
+    if (bankError) {
+      setError(bankError)
       return
     }
     setSaving(true)

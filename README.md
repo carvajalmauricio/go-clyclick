@@ -49,6 +49,26 @@ npm run pages:dev
 > En producción el secreto real se define con `wrangler pages secret put` y
 > NUNCA se versiona.
 
+## Datos bancarios y colores de botones
+
+En el editor, **Datos Bancarios** permite agregar varias cuentas de Deuna, Banco Guayaquil,
+Produbanco, Banco Pichincha y Banco del Pacífico. Cada cuenta genera un botón independiente. La sección
+Datos Bancarios se incluye automáticamente y no aparece en el perfil hasta tener contenido;
+puedes cambiar su título o asignar las cuentas a otra sección.
+
+- Para Deuna, Guayaquil y Produbanco puedes seleccionar una imagen del QR o pegar un enlace.
+  El QR se lee en el navegador: la imagen no se envía a la API ni se guarda en R2 o KV.
+  Se aceptan imágenes PNG, JPG, WebP y GIF de hasta 10 MB. El QR debe contener un enlace
+  HTTP/HTTPS; los códigos con datos de pago sin enlace muestran un mensaje explicativo.
+- Si hay enlace, el botón abre ese enlace. Si no, muestra el titular, tipo y número de cuenta,
+  junto con la cédula/RUC y correo opcionales. El visitante puede copiar los datos.
+- Puedes ordenar, ocultar y eliminar cuentas, con un máximo de 30 por negocio.
+- En la personalización de cada acción o cuenta puedes elegir **Fondo**, **Texto** y **Borde**,
+  o volver a **Usar colores del tema**. Se aplica tanto al preview como al perfil público.
+- Las animaciones disponibles son **Pulso** (tamaño), **Flotar** (desplazamiento vertical),
+  **Brillo** (luz en el contorno) y **Ninguna**. Con movimiento reducido mantienen su efecto
+  propio con menor intensidad y velocidad.
+
 ## API
 
 | Método | Ruta | Auth | Descripción |

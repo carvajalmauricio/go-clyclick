@@ -2,6 +2,9 @@ import { useMemo, useState } from 'react'
 import { ACTION_DEFINITIONS, getActionSettings } from '../utils/links.js'
 import { uploadMedia } from '../utils/api.js'
 import { Icon } from './Icons.jsx'
+import ButtonColorFields from './ButtonColorFields.jsx'
+import AnimationSelector from './AnimationSelector.jsx'
+import { BANK_SECTION_ID, getProfileSections } from '../utils/banking.js'
 
 export default function ActionManager({ business, onChange }) {
   const [open, setOpen] = useState('whatsapp')
@@ -9,7 +12,7 @@ export default function ActionManager({ business, onChange }) {
   const [uploading, setUploading] = useState('')
   const settings = useMemo(() => getActionSettings(business), [business.actionSettings])
   const definitions = new Map(ACTION_DEFINITIONS.map((item) => [item.type, item]))
-  const sections = Array.isArray(business.sections) ? business.sections : []
+  const sections = getProfileSections(business)
 
   function commit(next) {
     onChange({ actionSettings: next.map((item, order) => ({ ...item, order })) })
@@ -62,9 +65,11 @@ export default function ActionManager({ business, onChange }) {
   }
 
   function removeSection(id) {
+    if (id === BANK_SECTION_ID) return
     onChange({
       sections: sections.filter((section) => section.id !== id),
       actionSettings: settings.map((item) => item.sectionId === id ? { ...item, sectionId: '' } : item),
+      bankAccounts: (business.bankAccounts || []).map((account) => account.sectionId === id ? { ...account, sectionId: BANK_SECTION_ID } : account),
     })
   }
 
@@ -110,10 +115,9 @@ export default function ActionManager({ business, onChange }) {
                     <label className="flex flex-col gap-1 text-xs text-gray-400">Presentación
                       <select value={item.layout || 'classic'} onChange={(event) => patch(item.type, { layout: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white"><option value="classic">Clásico</option><option value="featured">Destacado</option></select>
                     </label>
-                    <label className="flex flex-col gap-1 text-xs text-gray-400">Animación
-                      <select value={item.animation || 'none'} onChange={(event) => patch(item.type, { animation: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white"><option value="none">Ninguna</option><option value="pulse">Pulso</option><option value="bounce">Flotar</option></select>
-                    </label>
+                    <AnimationSelector value={item.animation} onChange={(animation) => patch(item.type, { animation })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white" />
                   </div>
+                  <ButtonColorFields business={business} action={{ ...item, primary: item.type === 'whatsapp' }} onChange={(colors) => patch(item.type, { colors })} />
                   <label className="mt-3 flex flex-col gap-1 text-xs text-gray-400">Sección
                     <select value={item.sectionId || ''} onChange={(event) => patch(item.type, { sectionId: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white"><option value="">Sin sección</option>{sections.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}</select>
                   </label>
@@ -135,7 +139,7 @@ export default function ActionManager({ business, onChange }) {
       <div className="rounded-xl border border-gray-700 p-4">
         <div className="mb-3 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-clickclick-orange">Secciones</p><button type="button" onClick={addSection} className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs">+ Agregar</button></div>
         {sections.length === 0 && <p className="text-xs text-gray-500">Puedes agrupar acciones bajo encabezados.</p>}
-        <div className="space-y-2">{sections.map((section) => <div key={section.id} className="flex gap-2"><input value={section.title} onChange={(event) => patchSection(section.id, event.target.value)} className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm" /><button type="button" onClick={() => removeSection(section.id)} className="px-2 text-xs text-red-400">Eliminar</button></div>)}</div>
+        <div className="space-y-2">{sections.map((section) => <div key={section.id} className="flex items-center gap-2"><input aria-label="Nombre de sección" value={section.title} onChange={(event) => patchSection(section.id, event.target.value)} className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm" />{section.id === BANK_SECTION_ID ? <span className="text-xs text-gray-500">Bancaria</span> : <button type="button" onClick={() => removeSection(section.id)} className="px-2 text-xs text-red-400">Eliminar</button>}</div>)}</div>
       </div>
     </div>
   )

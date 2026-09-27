@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ThemeSelector from './ThemeSelector.jsx'
 import ActionManager from './ActionManager.jsx'
+import BankAccountManager from './BankAccountManager.jsx'
 import { uploadLogo } from '../utils/api.js'
 import { resolveTheme } from '../utils/themes.js'
 
@@ -127,6 +128,10 @@ export default function BusinessForm({ value, onChange, isEdit }) {
 
       <Section title="Orden y presentación">
         <ActionManager business={b} onChange={onChange} />
+      </Section>
+
+      <Section title="Datos Bancarios">
+        <BankAccountManager business={b} onChange={onChange} />
       </Section>
 
       <Section title="Contacto (vCard)">

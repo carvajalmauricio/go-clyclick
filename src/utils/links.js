@@ -1,5 +1,7 @@
 // Construye las URLs finales de los botones de acción del perfil a partir
 // de los datos crudos del negocio.
+import { buildBankActions } from './banking.js'
+import { normalizeAnimation } from './animations.js'
 
 // Normaliza un número para WhatsApp (solo dígitos, con código de país).
 export function whatsappUrl(number, message) {
@@ -85,7 +87,7 @@ export function buildActions(business) {
   }
   const definitions = new Map(ACTION_DEFINITIONS.map((item) => [item.type, item]))
 
-  return getActionSettings(b)
+  const actions = getActionSettings(b)
     .filter((setting) => setting.enabled !== false && urls[setting.type])
     .map((setting) => {
       const definition = definitions.get(setting.type)
@@ -100,9 +102,11 @@ export function buildActions(business) {
         layout: setting.layout || 'classic',
         thumbnail: setting.thumbnail || '',
         sectionId: setting.sectionId || '',
-        animation: setting.animation || 'none',
+        animation: normalizeAnimation(setting.animation),
+        colors: setting.colors,
       }
     })
+  return [...actions, ...buildBankActions(b)]
 }
 
 // Redes sociales activas
