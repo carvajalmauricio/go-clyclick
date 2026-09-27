@@ -11,7 +11,6 @@ import BankLogo from './BankLogo.jsx'
 import BankAccountDialog from './BankAccountDialog.jsx'
 import { animationClass, innerAnimationClass } from '../utils/animations.js'
 import { addressFromMapsUrl } from '../utils/links.js'
-import { shareLink } from '../utils/clipboard.js'
 import CopyButton from './CopyButton.jsx'
 import HeroCarousel from './HeroCarousel.jsx'
 import { buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
@@ -257,35 +256,6 @@ function ActionGroup({ actions, business, theme, lang = 'es' }) {
   )
 }
 
-// Botón pequeño para compartir/copiar un enlace concreto de la tarjeta.
-// Usa la Web Share API con respaldo a copiar la URL, y muestra 'Copiado' de
-// forma transitoria (feedback seguro para prefers-reduced-motion).
-function ShareActionButton({ url, label, theme }) {
-  const [copied, setCopied] = useState(false)
-  async function onShare(event) {
-    // Evita disparar el enlace/botón contenedor de la tarjeta.
-    event.preventDefault()
-    event.stopPropagation()
-    const { copied: didCopy } = await shareLink({ title: label, url })
-    if (didCopy) {
-      setCopied(true)
-      window.setTimeout(() => setCopied(false), 1600)
-    }
-  }
-  return (
-    <button
-      type="button"
-      onClick={onShare}
-      aria-label={copied ? 'Enlace copiado' : `Compartir ${label || 'enlace'}`}
-      title={copied ? 'Copiado' : 'Compartir'}
-      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md motion-safe:transition hover:scale-105"
-      style={{ background: `color-mix(in srgb, ${theme.card} 82%, transparent)`, color: theme.text, border: `1px solid ${theme.border}` }}
-    >
-      <Icon name={copied ? 'copy' : 'share'} size={15} />
-    </button>
-  )
-}
-
 function ActionCard({ action, business, theme, lang = 'es' }) {
   const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
@@ -352,11 +322,6 @@ function ActionCard({ action, business, theme, lang = 'es' }) {
   const className = `${layoutClass} ${widthClass} font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
   const ariaLabel = needsAriaLabel ? action.label : undefined
-  // Compartir por enlace (#12): solo para enlaces reales navegables (no #contact,
-  // no acciones que abren el diálogo de cuenta) y en layouts que no sean 'icon'
-  // (que debe mantenerse compacto). Se posiciona en la esquina de la tarjeta.
-  const isRealLink = Boolean(action.url) && action.url !== '#contact' && !action.isContact
-  const canShare = isRealLink && layout !== 'icon'
   return (
     <div className={`relative ${layout === 'icon' ? 'inline-flex' : 'w-full'} ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
       {action.bankAccount && !action.url ? (
@@ -366,7 +331,6 @@ function ActionCard({ action, business, theme, lang = 'es' }) {
       ) : (
         <a href={action.url} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</a>
       )}
-      {canShare && <ShareActionButton url={action.url} label={action.label} theme={theme} />}
       {showAccount && <BankAccountDialog account={action.bankAccount} onClose={() => setShowAccount(false)} />}
     </div>
   )
