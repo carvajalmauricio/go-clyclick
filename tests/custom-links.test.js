@@ -98,6 +98,12 @@ test('sanitizeLinkUrl conserva URLs sin esquema con puerto explícito (host:port
   assert.equal(sanitizeLinkUrl('mailto:x@y.com'), '')
   assert.equal(sanitizeLinkUrl('data:text/html,<script>'), '')
   assert.equal(sanitizeLinkUrl('ftp://archivos.com'), '')
+  // Los esquemas peligrosos con carga que empieza en dígito también se vacían
+  // (independiente del lookahead de puerto): defensa en profundidad.
+  assert.equal(sanitizeLinkUrl('javascript:123'), '')
+  assert.equal(sanitizeLinkUrl('data:123'), '')
+  assert.equal(sanitizeLinkUrl('vbscript:456'), '')
+  assert.equal(sanitizeLinkUrl('file:///etc/passwd'), '')
   // http(s) explícito se conserva.
   assert.equal(sanitizeLinkUrl('https://ejemplo.com'), 'https://ejemplo.com')
   assert.equal(sanitizeLinkUrl('http://ejemplo.com:9000'), 'http://ejemplo.com:9000')

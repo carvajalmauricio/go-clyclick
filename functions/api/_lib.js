@@ -41,6 +41,15 @@ export function sanitizeLinkUrl(value) {
   // el valor como "con esquema" cuando lo que sigue a los dos puntos NO son
   // dígitos (un puerto). Así "dominio.com:8080" se conserva y ensureHttp le
   // antepone https://, mientras que javascript:/mailto:/data:/ftp:/etc. se vacían.
+  // Primero rechazamos esquemas peligrosos conocidos SIN importar lo que siga a
+  // los dos puntos, para no depender de que ensureHttp los neutralice después
+  // (defensa en profundidad). Cubre javascript:123, data:123, etc.
+  const dangerous = /^(javascript|data|vbscript|file|blob|about|mailto|tel|ftp):/i
+  if (dangerous.test(url)) return ''
+  // Luego, cualquier otro esquema explícito distinto de http(s) también se vacía,
+  // salvo el caso de una URL sin esquema con puerto ("dominio.com:8080/x"): ahí
+  // lo que sigue a los dos puntos son dígitos (un puerto), así que se conserva y
+  // ensureHttp le antepone https://.
   const schemeMatch = url.match(/^([a-z][a-z0-9+.-]*):(?![0-9])/i)
   if (schemeMatch) {
     const scheme = schemeMatch[1].toLowerCase()
