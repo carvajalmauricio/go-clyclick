@@ -264,10 +264,11 @@ export function normalizeBusiness(payload) {
         type: ['theme', 'solid', 'gradient', 'image', 'video'].includes(payload.background.type) ? payload.background.type : 'theme',
         color: String(payload.background.color || '').trim() || undefined,
         color2: String(payload.background.color2 || '').trim() || undefined,
-        angle: Math.max(0, Math.min(360, Number(payload.background.angle) || 160)),
+        angle: Math.max(0, Math.min(360, Number.isFinite(Number(payload.background.angle ?? 160)) ? Number(payload.background.angle ?? 160) : 160)),
         url: String(payload.background.url || '').trim() || undefined,
         position: String(payload.background.position || 'center').trim(),
         overlay: Math.max(0, Math.min(0.75, Number(payload.background.overlay) || 0)),
+        blur: Math.max(0, Math.min(30, Number(payload.background.blur) || 0)),
         pattern: ['none', 'shapes', 'grid', 'glow'].includes(payload.background.pattern) ? payload.background.pattern : 'none',
       }
     : { type: 'theme', pattern: 'none', overlay: 0.25 }

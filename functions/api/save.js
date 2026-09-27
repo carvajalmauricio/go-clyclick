@@ -35,9 +35,8 @@ export async function onRequestPost(context) {
   const existingRaw = await env.BUSINESSES.get(key)
   const isNew = !existingRaw
 
-  if (isNew && payload.allowOverwrite !== true && payload.isEdit !== true) {
-    // Comportamiento seguro: si ya existe y no es edición declarada, avisar.
-    // (existingRaw es null aquí, así que sigue el flujo normal de creación)
+  if (!isNew && payload.isEdit !== true) {
+    return json({ error: 'Esta dirección ya está ocupada. Elige otra para el negocio.' }, 409)
   }
 
   if (!isNew) {

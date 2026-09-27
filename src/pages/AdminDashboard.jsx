@@ -296,29 +296,74 @@ function EditorRouter({ view, setView }) {
 // --- Editor con preview en vivo ---
 function Editor({ isEdit, slug, onDone }) {
   const [business, setBusiness] = useState(EMPTY_BUSINESS)
-  const [loading, setLoading] = useState(isEdit)
+  const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [loadFailed, setLoadFailed] = useState(false)
   const [error, setError] = useState('')
+
+  const [baseline, setBaseline] = useState(EMPTY_BUSINESS)
+  const [notice, setNotice] = useState('')
+  const [preview, setPreview] = useState(false)
+  const draftKey = `clyclick:draft:${slug || 'new'}`
+  const dirty = JSON.stringify(business) !== JSON.stringify(baseline)
 
   useEffect(() => {
     let active = true
-    if (isEdit && slug) {
-      getBusiness(slug)
-        .then((data) => {
-          if (active && data) setBusiness({ ...EMPTY_BUSINESS, ...data })
-          setLoading(false)
-        })
-        .catch(() => {
-          setError('No se pudo cargar el negocio')
-          setLoading(false)
-        })
+    async function load() {
+      try {
+        const data = isEdit ? await getBusiness(slug) : EMPTY_BUSINESS
+        if (!data) throw new Error('No se encontró el negocio')
+        if (!active) return
+        const initial = { ...EMPTY_BUSINESS, ...data }
+        setBaseline(initial)
+        setBusiness(initial)
+        try {
+          const draft = JSON.parse(localStorage.getItem(draftKey) || 'null')
+          if (draft?.business && typeof draft.business === 'object' && !Array.isArray(draft.business)) {
+            setBusiness({ ...initial, ...draft.business, ...(isEdit ? { slug } : {}) })
+            setNotice('Borrador recuperado de este navegador. Aún no está publicado.')
+          }
+        } catch { setNotice('No se pudo recuperar el borrador de este navegador.') }
+      } catch (error) {
+        if (active) {
+          setLoadFailed(true)
+          setError(error.message || 'No se pudo cargar el negocio')
+        }
+      } finally {
+        if (active) setLoading(false)
+      }
     }
-    return () => {
-      active = false
-    }
-  }, [isEdit, slug])
+    load()
+    return () => { active = false }
+  }, [isEdit, slug, draftKey])
+
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (event) => { event.preventDefault(); event.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
+
+  function saveDraft() {
+    try {
+      localStorage.setItem(draftKey, JSON.stringify({ business, savedAt: Date.now() }))
+      setNotice('Borrador guardado en este navegador. Aún no está publicado.')
+    } catch { setError('No se pudo guardar el borrador. Mantén esta página abierta o publica los cambios.') }
+  }
+
+  function leaveEditor() {
+    if (!dirty || window.confirm('Hay cambios sin publicar. ¿Salir del editor? Guarda un borrador antes de salir para recuperarlos.')) onDone()
+  }
+
+  function discardDraft() {
+    if (!window.confirm('¿Descartar el borrador y los cambios sin publicar?')) return
+    try { localStorage.removeItem(draftKey) } catch { /* Storage may be unavailable. */ }
+    setBusiness(baseline)
+    setNotice('Borrador descartado.')
+  }
 
   function patch(p) {
+    setNotice('')
     setBusiness((prev) => ({ ...prev, ...p }))
   }
 
@@ -336,6 +381,7 @@ function Editor({ isEdit, slug, onDone }) {
     setSaving(true)
     try {
       await saveBusiness(business, { isEdit })
+      try { localStorage.removeItem(draftKey) } catch { /* Published successfully. */ }
       onDone()
     } catch (e) {
       setError(e.message)
@@ -354,29 +400,36 @@ function Editor({ isEdit, slug, onDone }) {
 
   return (
     <div className="min-h-screen bg-clickclick-dark text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800 sticky top-0 bg-clickclick-dark z-20">
-        <button onClick={onDone} className="text-gray-400 hover:text-white text-sm">
+      <header className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-800 sticky top-0 bg-clickclick-dark z-20">
+        <button onClick={leaveEditor} disabled={saving} className="text-gray-400 hover:text-white text-sm">
           ← Volver
         </button>
-        <h1 className="text-lg font-bold text-clickclick-orange">
+        <h1 className="min-w-0 break-words text-base sm:text-lg font-bold text-clickclick-orange">
           {isEdit ? `Editar: ${business.name}` : 'Nuevo negocio'}
         </h1>
         <button
           onClick={onSave}
-          disabled={saving}
+          disabled={saving || loadFailed}
           className="rounded-lg bg-clickclick-orange text-clickclick-dark font-semibold px-5 py-2 text-sm disabled:opacity-50"
         >
-          {saving ? 'Guardando...' : 'Guardar'}
+          {saving ? 'Publicando...' : 'Publicar'}
         </button>
       </header>
 
+      <div className="max-w-6xl mx-auto px-6 pt-4 flex flex-wrap items-center gap-3 text-sm">
+        <span className="text-gray-400">{dirty ? 'Cambios sin publicar' : 'Sin cambios pendientes'}</span>
+        <button type="button" onClick={saveDraft} disabled={saving || loading || loadFailed} className="rounded-lg bg-gray-800 px-3 py-2">Guardar borrador</button>
+        <button type="button" onClick={discardDraft} disabled={saving || loadFailed} className="text-gray-400 underline">Descartar borrador</button>
+        <button type="button" onClick={() => setPreview(!preview)} aria-expanded={preview} className="lg:hidden rounded-lg bg-gray-800 px-3 py-2">{preview ? 'Volver a editar' : 'Vista previa'}</button>
+        {notice && <p role="status" className="w-full text-amber-300">{notice}</p>}
+      </div>
       {error && <div className="max-w-6xl mx-auto px-6 pt-4"><p className="text-red-400">{error}</p></div>}
 
       <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <div className="order-2 lg:order-1">
-          <BusinessForm value={business} onChange={patch} isEdit={isEdit} />
+        <div className={preview ? 'hidden lg:block' : 'block'}>
+          <fieldset disabled={saving || loadFailed} className="min-w-0"><BusinessForm value={business} onChange={patch} isEdit={isEdit} /></fieldset>
         </div>
-        <div className="order-1 lg:order-2 lg:sticky lg:top-24 self-start flex justify-center">
+        <div className={`${preview ? 'flex' : 'hidden'} lg:flex lg:sticky lg:top-24 self-start justify-center`}>
           <PhoneMockup business={business} />
         </div>
       </div>

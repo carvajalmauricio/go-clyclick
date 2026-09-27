@@ -30,12 +30,16 @@ export default function ProfileView({ business, compact = false }) {
   return (
     <div
       className={`${compact ? 'min-h-full' : 'min-h-screen'} profile-background relative w-full flex flex-col items-center overflow-hidden`}
-      style={{ ...getBackgroundStyle(theme, background), color: theme.text }}
+      style={{ ...getBackgroundStyle(theme, ['image', 'video'].includes(background.type) ? null : background), color: theme.text }}
     >
-      {background.type === 'video' && background.url && (
+      {['image', 'video'].includes(background.type) && background.url && (
         <>
-          <video className="absolute inset-0 h-full w-full object-cover" src={background.url} autoPlay muted loop playsInline />
-          <div className="absolute inset-0" style={{ background: `rgba(0,0,0,${Number(background.overlay ?? 0.3)})` }} />
+          <div aria-hidden="true" className="absolute pointer-events-none" style={{ inset: -Math.max(0, Math.min(30, Number(background.blur) || 0)) * 2, filter: `blur(${Math.max(0, Math.min(30, Number(background.blur) || 0))}px)` }}>
+            {background.type === 'video'
+              ? <video className="h-full w-full object-cover" src={background.url} autoPlay muted loop playsInline />
+              : <div className="h-full w-full" style={{ backgroundImage: `url("${background.url}")`, backgroundSize: 'cover', backgroundPosition: background.position || 'center' }} />}
+          </div>
+          <div aria-hidden="true" className="absolute inset-0 pointer-events-none" style={{ background: `rgba(0,0,0,${Number(background.overlay ?? 0.25)})` }} />
         </>
       )}
       <BackgroundPattern pattern={background.pattern || theme.pattern} />

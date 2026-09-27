@@ -1,4 +1,5 @@
 import { authorize, json } from './api/_lib.js'
+import { addProfileMetadata } from './api/_metadata.js'
 
 // Middleware global:
 // - aplica defensa en profundidad al panel administrativo;
@@ -33,7 +34,7 @@ export async function onRequest(context) {
     })
   }
 
-  const response = await next()
+  const response = await addProfileMetadata(await next(), request, env)
   const newHeaders = new Headers(response.headers)
   for (const [key, value] of Object.entries(corsHeaders())) {
     newHeaders.set(key, value)

@@ -8,10 +8,17 @@ export default function ShareMenu({ business, theme, compact = false }) {
   const [qr, setQr] = useState('')
   const url = profileUrl(business.slug)
 
+  const [qrError, setQrError] = useState('')
+  const [retry, setRetry] = useState(0)
   useEffect(() => {
-    if (!open || qr) return
-    generatePngDataUrl(url, { size: 640, logoUrl: business.logo }).then(setQr).catch(() => {})
-  }, [open, qr, url, business.logo])
+    let active = true
+    setQr('')
+    setQrError('')
+    if (open) generatePngDataUrl(url, { size: 640, logoUrl: business.logo })
+      .then((value) => { if (active) setQr(value) })
+      .catch(() => { if (active) setQrError('No se pudo generar el QR.') })
+    return () => { active = false }
+  }, [open, url, business.logo, retry])
 
   async function share() {
     if (navigator.share) {
@@ -37,7 +44,7 @@ export default function ShareMenu({ business, theme, compact = false }) {
         onClick={() => setOpen(true)}
         aria-label="Compartir perfil"
         className={`absolute z-20 flex items-center justify-center rounded-full backdrop-blur-md transition hover:scale-105 ${compact ? 'right-3 top-3 h-9 w-9' : 'right-5 top-5 h-11 w-11'}`}
-        style={{ background: `${theme.card}dd`, color: theme.text, border: `1px solid ${theme.border}` }}
+        style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, color: theme.text, border: `1px solid ${theme.border}` }}
       >
         <Icon name="share" size={compact ? 17 : 20} />
       </button>
@@ -60,6 +67,7 @@ export default function ShareMenu({ business, theme, compact = false }) {
               {qr ? <img src={qr} alt={`QR de ${business.name}`} className="h-full w-full" /> : <div className="aspect-square animate-pulse rounded-xl bg-gray-100" />}
             </div>
 
+            {qrError && <p role="alert" className="mt-3 text-sm text-red-700">{qrError} <button type="button" className="underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
             <button type="button" onClick={copy} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 font-semibold text-white">
               <Icon name="copy" size={18} /> {copied ? 'Enlace copiado' : 'Copiar enlace'}
             </button>

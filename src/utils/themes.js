@@ -144,7 +144,7 @@ export function getBackgroundStyle(theme, background) {
   if (background.type === 'solid') return { background: background.color || theme.bg }
   if (background.type === 'gradient') {
     return {
-      background: `linear-gradient(${background.angle || 160}deg, ${background.color || theme.bg} 0%, ${background.color2 || theme.accent} 100%)`,
+      background: `linear-gradient(${background.angle ?? 160}deg, ${background.color || theme.bg} 0%, ${background.color2 || theme.accent} 100%)`,
     }
   }
   if (background.type === 'image' && background.url) {
