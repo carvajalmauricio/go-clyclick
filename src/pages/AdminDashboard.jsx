@@ -19,6 +19,7 @@ const EMPTY_BUSINESS = {
   description: '',
   descriptionColor: '',
   logo: '',
+  heroSlides: { enabled: false, interval: 3, items: [] },
   theme: 'vibrant',
   background: { type: 'theme', pattern: 'none', overlay: 0.25 },
   buttonStyle: { shape: 'rounded', variant: 'filled', shadow: 'soft' },

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import ThemeSelector from './ThemeSelector.jsx'
 import ActionManager from './ActionManager.jsx'
 import BankAccountManager from './BankAccountManager.jsx'
+import HeroSlidesManager from './HeroSlidesManager.jsx'
 import { uploadLogo } from '../utils/api.js'
 import { resolveTheme } from '../utils/themes.js'
 
@@ -106,6 +107,10 @@ export default function BusinessForm({ value, onChange, isEdit }) {
             </div>
           </div>
         </Field>
+      </Section>
+
+      <Section title="Slides de presentación">
+        <HeroSlidesManager business={b} onChange={onChange} />
       </Section>
 
       <Section title="Botones de acción">

@@ -10,6 +10,7 @@ import { getButtonColors } from '../utils/buttonColors.js'
 import BankLogo from './BankLogo.jsx'
 import BankAccountDialog from './BankAccountDialog.jsx'
 import { animationClass } from '../utils/animations.js'
+import HeroCarousel from './HeroCarousel.jsx'
 
 // Vista de presentación del perfil de un negocio.
 // Se usa en la página pública y dentro del simulador móvil del admin.
@@ -19,13 +20,6 @@ export default function ProfileView({ business, compact = false }) {
   const socials = buildSocials(business)
   const sections = getProfileSections(business)
   const background = business.background || { type: 'theme' }
-
-  const initials = (business.name || '?')
-    .split(' ')
-    .map((w) => w[0])
-    .slice(0, 2)
-    .join('')
-    .toUpperCase()
 
   return (
     <div
@@ -46,40 +40,8 @@ export default function ProfileView({ business, compact = false }) {
       <ShareMenu business={business} theme={theme} compact={compact} />
 
       <div className={`relative z-10 w-full flex-1 flex flex-col items-center ${compact ? 'max-w-full px-4 py-6' : 'max-w-lg px-6 pt-10 pb-6'}`}>
-        {/* Logo / avatar */}
-        <div
-          className="rounded-full flex items-center justify-center overflow-hidden shadow-lg"
-          style={{
-            width: compact ? 84 : 104,
-            height: compact ? 84 : 104,
-            background: theme.card,
-            border: `2px solid ${theme.accent}`,
-          }}
-        >
-          {business.logo ? (
-            <img src={business.logo} alt={business.name} className="w-full h-full object-cover" />
-          ) : (
-            <span style={{ color: theme.accent, fontSize: compact ? 30 : 38, fontWeight: 700 }}>{initials}</span>
-          )}
-        </div>
-
-        {/* Nombre + categoría */}
-        <h1 className="mt-4 text-center font-bold" style={{ fontSize: compact ? 20 : 26 }}>
-          {business.name || 'Nombre del negocio'}
-        </h1>
-        {business.category && (
-          <span
-            className="mt-2 px-3 py-1 rounded-full text-xs font-medium"
-            style={{ background: theme.accent, color: theme.accentText }}
-          >
-            {business.category}
-          </span>
-        )}
-        {business.description && (
-          <p className="mt-3 text-center text-sm" style={{ color: business.descriptionColor || theme.subtext }}>
-            {business.description}
-          </p>
-        )}
+        {/* Tarjeta de presentación: logo, nombre, categoría y descripción (con slides opcionales) */}
+        <HeroCarousel business={business} theme={theme} compact={compact} />
 
         {/* Redes sociales */}
         {socials.length > 0 && (

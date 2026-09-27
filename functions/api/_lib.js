@@ -5,6 +5,7 @@
 import { BANK_SECTION_ID, getProfileSections, normalizeBankAccounts, validateBankAccounts } from '../../src/utils/banking.js'
 import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
+import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
 
 export const KEY_PREFIX = 'business:'
 export const INDEX_KEY = 'businesses:index'
@@ -290,6 +291,8 @@ export function normalizeBusiness(payload) {
       ? String(payload.descriptionColor).trim()
       : '',
     logo: String(payload.logo || '').trim(), // URL (R2 en el futuro o externa por ahora)
+    // Slides que rotan en la tarjeta de presentación después del slide base
+    heroSlides: normalizeHeroSlides(payload.heroSlides),
     theme: String(payload.theme || 'vibrant'),
     background,
     buttonStyle,
