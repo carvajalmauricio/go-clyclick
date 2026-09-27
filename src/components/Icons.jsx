@@ -108,6 +108,57 @@ export function Icon({ name, size = 22, className = '' }) {
           <path d="M13.5 22v-8h2.7l.4-3.1h-3.1V8.9c0-.9.25-1.5 1.55-1.5H17V4.6c-.3 0-1.25-.1-2.35-.1-2.32 0-3.9 1.42-3.9 4.02v2.28H8v3.1h2.75V22h2.75z" />
         </svg>
       )
+    // --- Iconos de interfaz del panel admin ---
+    case 'arrow-left':
+      return <svg {...props}><path d="M19 12H5M12 19l-7-7 7-7" /></svg>
+    case 'chevron-up':
+      return <svg {...props}><path d="m18 15-6-6-6 6" /></svg>
+    case 'chevron-down':
+      return <svg {...props}><path d="m6 9 6 6 6-6" /></svg>
+    case 'plus':
+      return <svg {...props}><path d="M12 5v14M5 12h14" /></svg>
+    case 'search':
+      return <svg {...props}><circle cx="11" cy="11" r="7" /><path d="m20 20-3.5-3.5" /></svg>
+    case 'eye':
+      return <svg {...props}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+    case 'edit':
+      return <svg {...props}><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+    case 'qr':
+      return (
+        <svg {...props}>
+          <rect x="3" y="3" width="7" height="7" rx="1" /><rect x="14" y="3" width="7" height="7" rx="1" /><rect x="3" y="14" width="7" height="7" rx="1" />
+          <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
+        </svg>
+      )
+    case 'print':
+      return <svg {...props}><path d="M6 9V2h12v7" /><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><rect x="6" y="14" width="12" height="8" /></svg>
+    case 'trash':
+      return <svg {...props}><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" /><path d="M10 11v6M14 11v6" /></svg>
+    case 'upload':
+      return <svg {...props}><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m17 8-5-5-5 5M12 3v12" /></svg>
+    case 'external':
+      return <svg {...props}><path d="M15 3h6v6M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></svg>
+    case 'more':
+      return <svg {...props} fill="currentColor" stroke="none"><circle cx="5" cy="12" r="2" /><circle cx="12" cy="12" r="2" /><circle cx="19" cy="12" r="2" /></svg>
+    case 'info':
+      return <svg {...props}><circle cx="12" cy="12" r="10" /><path d="M12 16v-4M12 8h.01" /></svg>
+    case 'slides':
+      return <svg {...props}><rect x="6" y="4" width="12" height="16" rx="2" /><path d="M2 7v10M22 7v10" /></svg>
+    case 'cursor':
+      return <svg {...props}><path d="m4 4 7 17 2.5-7.5L21 11z" /></svg>
+    case 'bank':
+      return <svg {...props}><path d="M3 10h18L12 3zM5 10v8M9.5 10v8M14.5 10v8M19 10v8M3 21h18" /></svg>
+    case 'palette':
+      return (
+        <svg {...props}>
+          <path d="M12 22a10 10 0 1 1 10-10c0 2.8-2.2 4-4.5 4H16a2 2 0 0 0-1.5 3.3c.4.5.3 1.4-.3 1.9-.6.5-1.4.8-2.2.8z" />
+          <circle cx="7.5" cy="11" r="1" fill="currentColor" /><circle cx="10.5" cy="7" r="1" fill="currentColor" /><circle cx="15.5" cy="7.5" r="1" fill="currentColor" />
+        </svg>
+      )
+    case 'store':
+      return <svg {...props}><path d="M3 9 4.5 4h15L21 9M3 9v11h18V9M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0" /><path d="M9 20v-6h6v6" /></svg>
+    case 'grip':
+      return <svg {...props} fill="currentColor" stroke="none"><circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" /><circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" /><circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" /></svg>
     default:
       return (
         <svg {...props}>
