@@ -2,11 +2,13 @@ import { useState } from 'react'
 import ThemeSelector from './ThemeSelector.jsx'
 import ActionManager from './ActionManager.jsx'
 import { uploadLogo } from '../utils/api.js'
+import { resolveTheme } from '../utils/themes.js'
 
 // Formulario controlado de configuración de negocio.
 // `value` es el objeto negocio; `onChange(patch)` aplica cambios parciales.
 export default function BusinessForm({ value, onChange, isEdit }) {
   const b = value
+  const theme = resolveTheme(b.theme, b.customColors)
   const [uploading, setUploading] = useState(false)
   const [uploadError, setUploadError] = useState('')
 
@@ -53,6 +55,25 @@ export default function BusinessForm({ value, onChange, isEdit }) {
         <Field label="Descripción / Eslogan">
           <textarea className={inputCls} rows={2} value={b.description || ''} onChange={set('description')} />
         </Field>
+        <div className="flex flex-wrap items-end gap-3">
+          <Field label="Color de la descripción">
+            <input
+              type="color"
+              value={b.descriptionColor || theme.subtext}
+              onInput={set('descriptionColor')}
+              onChange={set('descriptionColor')}
+              className="h-10 w-16 cursor-pointer rounded-lg border border-gray-600 bg-gray-800 p-1"
+            />
+          </Field>
+          <button
+            type="button"
+            onClick={() => onChange({ descriptionColor: '' })}
+            disabled={!b.descriptionColor}
+            className="py-2 text-xs text-gray-400 underline disabled:opacity-50"
+          >
+            Usar color del tema
+          </button>
+        </div>
         <Field label="Logo del negocio">
           <div className="flex items-center gap-3">
             <div className="w-14 h-14 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center overflow-hidden shrink-0">

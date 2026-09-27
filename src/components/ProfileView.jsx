@@ -1,7 +1,7 @@
 import { Icon } from './Icons.jsx'
 import SocialLinkItem from './SocialLinkItem.jsx'
 import ShareMenu from './ShareMenu.jsx'
-import { resolveTheme, isLightColor, getBackgroundStyle } from '../utils/themes.js'
+import { resolveTheme, getBackgroundStyle } from '../utils/themes.js'
 import { buildActions, buildSocials } from '../utils/links.js'
 import { downloadVCard } from '../utils/vcard.js'
 
@@ -66,7 +66,7 @@ export default function ProfileView({ business, compact = false }) {
           </span>
         )}
         {business.description && (
-          <p className="mt-3 text-center text-sm" style={{ color: theme.subtext }}>
+          <p className="mt-3 text-center text-sm" style={{ color: business.descriptionColor || theme.subtext }}>
             {business.description}
           </p>
         )}
@@ -98,12 +98,12 @@ export default function ProfileView({ business, compact = false }) {
         </div>
 
         {/* Footer fijado al fondo (mt-auto lo empuja abajo) */}
-        <div className="mt-auto pt-10 w-full flex flex-col items-center gap-2">
-          <ClickClickLogo lightBg={isLightColor(theme.bg)} />
+        <footer className="mt-auto pt-10 w-full flex flex-col items-center gap-2">
+          <ClickClickLogo color={theme.text} />
           <div className="text-center text-xs" style={{ color: theme.subtext }}>
-            Powered by <span style={{ color: theme.accent, fontWeight: 600 }}>ClyClick</span> · Conecta tu negocio con un toque
+            Powered by <span style={{ color: theme.text, fontWeight: 600 }}>ClyClick</span> · Conecta tu negocio con un toque
           </div>
-        </div>
+        </footer>
       </div>
     </div>
   )
@@ -153,11 +153,17 @@ function ActionCard({ action, business, theme }) {
     </>
   )
 
-  const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} ${animation} w-full font-medium backdrop-blur-sm transition-transform hover:scale-[1.015]`
-  if (action.isContact) {
-    return <button type="button" onClick={() => downloadVCard(business)} className={className} style={cardStyle}>{content}</button>
-  }
-  return <a href={action.url} target="_blank" rel="noopener noreferrer" className={className} style={cardStyle}>{content}</a>
+  const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} w-full font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015]`
+  // Separar la animación del efecto hover evita que ambos compitan por transform.
+  return (
+    <div className={`w-full ${animation}`}>
+      {action.isContact ? (
+        <button type="button" onClick={() => downloadVCard(business)} className={className} style={cardStyle}>{content}</button>
+      ) : (
+        <a href={action.url} target="_blank" rel="noopener noreferrer" className={className} style={cardStyle}>{content}</a>
+      )}
+    </div>
+  )
 }
 
 function BackgroundPattern({ pattern }) {
@@ -165,19 +171,18 @@ function BackgroundPattern({ pattern }) {
   return <div aria-hidden="true" className={`profile-pattern profile-pattern-${pattern}`} />
 }
 
-// Logo oficial de ClyClick (PNG en /public). El logo es blanco, así que sobre
-// fondos claros lo invertimos a oscuro con un filtro para que sea visible.
-function ClickClickLogo({ lightBg }) {
+// La máscara conserva la silueta del logo y permite usar el color del título.
+function ClickClickLogo({ color }) {
   return (
-    <img
-      src="/logo-clyclick.png"
-      alt="ClyClick"
+    <div
+      role="img"
+      aria-label="ClyClick"
       style={{
         height: 40,
-        width: 'auto',
-        objectFit: 'contain',
-        filter: lightBg ? 'invert(1)' : 'none',
-        opacity: 0.9,
+        width: 160,
+        backgroundColor: color,
+        mask: 'url("/logo-clyclick.png") center / contain no-repeat',
+        WebkitMask: 'url("/logo-clyclick.png") center / contain no-repeat',
       }}
     />
   )

@@ -46,8 +46,13 @@ body {
 }
 .profile-action-pulse { animation: profilePulse 2.2s ease-in-out infinite; }
 .profile-action-bounce { animation: profileBounce 1.8s ease-in-out infinite; }
+@keyframes profileEmphasis {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.78; }
+}
 @media (prefers-reduced-motion: reduce) {
-  .profile-action-pulse, .profile-action-bounce { animation: none; }
+  /* Mantener el énfasis elegido sin desplazar ni escalar el botón. */
+  .profile-action-pulse, .profile-action-bounce { animation-name: profileEmphasis; }
 }
 
 /* ---------------------------------------------------------------------------

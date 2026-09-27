@@ -278,6 +278,9 @@ export function normalizeBusiness(payload) {
     name,
     category: String(payload.category || '').trim(),
     description: String(payload.description || '').trim(),
+    descriptionColor: /^#[0-9a-f]{6}$/i.test(String(payload.descriptionColor || '').trim())
+      ? String(payload.descriptionColor).trim()
+      : '',
     logo: String(payload.logo || '').trim(), // URL (R2 en el futuro o externa por ahora)
     theme: String(payload.theme || 'vibrant'),
     background,

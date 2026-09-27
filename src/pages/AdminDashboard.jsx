@@ -16,6 +16,7 @@ const EMPTY_BUSINESS = {
   slug: '',
   category: '',
   description: '',
+  descriptionColor: '',
   logo: '',
   theme: 'vibrant',
   background: { type: 'theme', pattern: 'none', overlay: 0.25 },
