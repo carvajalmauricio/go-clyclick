@@ -36,7 +36,12 @@ export function sanitizeLinkUrl(value) {
   const url = String(value || '').trim()
   if (!url) return ''
   // ¿Empieza con un esquema explícito "algo:"? (según RFC 3986: letra + [a-z0-9+.-])
-  const schemeMatch = url.match(/^([a-z][a-z0-9+.-]*):/i)
+  // Ojo: una URL sin esquema con puerto explícito ("dominio.com:8080/x") también
+  // encaja con ese patrón. Para no descartar ese enlace legítimo, solo tratamos
+  // el valor como "con esquema" cuando lo que sigue a los dos puntos NO son
+  // dígitos (un puerto). Así "dominio.com:8080" se conserva y ensureHttp le
+  // antepone https://, mientras que javascript:/mailto:/data:/ftp:/etc. se vacían.
+  const schemeMatch = url.match(/^([a-z][a-z0-9+.-]*):(?![0-9])/i)
   if (schemeMatch) {
     const scheme = schemeMatch[1].toLowerCase()
     if (scheme !== 'http' && scheme !== 'https') return ''

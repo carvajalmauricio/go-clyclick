@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import test from 'node:test'
-import { normalizeBusiness } from '../functions/api/_lib.js'
+import { normalizeBusiness, sanitizeLinkUrl } from '../functions/api/_lib.js'
 import { onRequestPost } from '../functions/admin/api/save.js'
 import { onRequestGet } from '../functions/api/business/[slug].js'
 import { buildActions, buildCustomLinks } from '../src/utils/links.js'
@@ -87,6 +87,20 @@ test('normalizeBusiness descarta esquemas de URL peligrosos en enlaces personali
   assert.equal(byTitle['HTTPS'], 'https://ejemplo.com')
   assert.equal(byTitle['HTTP'], 'http://ejemplo.com')
   assert.equal(byTitle['SinEsquema'], 'ejemplo.com/x')
+})
+
+test('sanitizeLinkUrl conserva URLs sin esquema con puerto explícito (host:port)', () => {
+  // Un puerto ("dominio:8080") no debe confundirse con un esquema y vaciarse.
+  assert.equal(sanitizeLinkUrl('example.com:8080/path'), 'example.com:8080/path')
+  assert.equal(sanitizeLinkUrl('mydomain.com:8443/promo'), 'mydomain.com:8443/promo')
+  // Los esquemas peligrosos siguen quedando en blanco.
+  assert.equal(sanitizeLinkUrl('javascript:alert(1)'), '')
+  assert.equal(sanitizeLinkUrl('mailto:x@y.com'), '')
+  assert.equal(sanitizeLinkUrl('data:text/html,<script>'), '')
+  assert.equal(sanitizeLinkUrl('ftp://archivos.com'), '')
+  // http(s) explícito se conserva.
+  assert.equal(sanitizeLinkUrl('https://ejemplo.com'), 'https://ejemplo.com')
+  assert.equal(sanitizeLinkUrl('http://ejemplo.com:9000'), 'http://ejemplo.com:9000')
 })
 
 test('buildCustomLinks nunca produce un href con esquema peligroso', () => {
