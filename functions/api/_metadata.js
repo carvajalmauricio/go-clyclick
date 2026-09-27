@@ -1,3 +1,5 @@
+import { fontStylesheetUrl } from '../../src/utils/fonts.js'
+
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])
 }
@@ -31,7 +33,11 @@ export function profileMetadata(business, origin) {
     ['name', 'twitter:card', 'summary'], ['name', 'twitter:title', title],
     ['name', 'twitter:description', description], ['name', 'twitter:image', image],
   ].map(([attribute, key, value]) => `<meta ${attribute}="${key}" content="${escapeHtml(value)}">`).join('')
-  return { title, description, html: `${tags}<link rel="canonical" href="${escapeHtml(url)}">` }
+  // Fuente personalizada (#8): se precarga en el primer pintado solo si hay una
+  // seleccionada, con display=swap. Si no hay, no se añade ningún <link>.
+  const fontHref = fontStylesheetUrl(business.font)
+  const fontLink = fontHref ? `<link rel="stylesheet" href="${escapeHtml(fontHref)}">` : ''
+  return { title, description, html: `${tags}<link rel="canonical" href="${escapeHtml(url)}">${fontLink}` }
 }
 
 export async function addProfileMetadata(response, request, env) {
