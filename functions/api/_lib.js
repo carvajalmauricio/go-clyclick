@@ -6,6 +6,8 @@ import { BANK_SECTION_ID, getProfileSections, normalizeBankAccounts, validateBan
 import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
+import { normalizeButtonStyle } from '../../src/utils/buttonStyles.js'
+import { BACKGROUND_PATTERNS } from '../../src/utils/themes.js'
 
 export const KEY_PREFIX = 'business:'
 export const INDEX_KEY = 'businesses:index'
@@ -270,17 +272,11 @@ export function normalizeBusiness(payload) {
         position: String(payload.background.position || 'center').trim(),
         overlay: Math.max(0, Math.min(0.75, Number(payload.background.overlay) || 0)),
         blur: Math.max(0, Math.min(30, Number(payload.background.blur) || 0)),
-        pattern: ['none', 'shapes', 'grid', 'glow'].includes(payload.background.pattern) ? payload.background.pattern : 'none',
+        pattern: BACKGROUND_PATTERNS.some((option) => option.value === payload.background.pattern) ? payload.background.pattern : 'none',
       }
     : { type: 'theme', pattern: 'none', overlay: 0.25 }
 
-  const buttonStyle = payload.buttonStyle && typeof payload.buttonStyle === 'object'
-    ? {
-        shape: ['square', 'rounded', 'pill'].includes(payload.buttonStyle.shape) ? payload.buttonStyle.shape : 'rounded',
-        variant: ['filled', 'outline', 'glass'].includes(payload.buttonStyle.variant) ? payload.buttonStyle.variant : 'filled',
-        shadow: ['none', 'soft', 'solid'].includes(payload.buttonStyle.shadow) ? payload.buttonStyle.shadow : 'soft',
-      }
-    : { shape: 'rounded', variant: 'filled', shadow: 'soft' }
+  const buttonStyle = normalizeButtonStyle(payload.buttonStyle)
 
   const business = {
     slug,

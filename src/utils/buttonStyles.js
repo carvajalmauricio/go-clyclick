@@ -1,0 +1,59 @@
+// Catálogo de estilos de botón compartido por el editor, el perfil y la
+// validación al guardar. Agregar una opción aquí la habilita en todas partes.
+
+export const BUTTON_SHAPES = [
+  { value: 'square', label: 'Recto', radius: '8px' },
+  { value: 'rounded', label: 'Redondeado', radius: '16px' },
+  { value: 'pill', label: 'Píldora', radius: '999px' },
+  { value: 'leaf', label: 'Hoja', radius: '22px 6px 22px 6px' },
+  { value: 'bubble', label: 'Burbuja', radius: '22px 22px 22px 6px' },
+]
+
+export const BUTTON_VARIANTS = [
+  { value: 'filled', label: 'Relleno' },
+  { value: 'outline', label: 'Borde' },
+  { value: 'glass', label: 'Cristal' },
+  { value: 'gradient', label: 'Degradado' },
+  { value: 'neon', label: 'Neón' },
+]
+
+export const BUTTON_SHADOWS = [
+  { value: 'none', label: 'Sin sombra' },
+  { value: 'soft', label: 'Suave' },
+  { value: 'solid', label: 'Sólida' },
+]
+
+export const DEFAULT_BUTTON_STYLE = { shape: 'rounded', variant: 'filled', shadow: 'soft' }
+
+const pick = (options, value, fallback) => (options.some((option) => option.value === value) ? value : fallback)
+
+export function normalizeButtonStyle(value) {
+  if (!value || typeof value !== 'object') return { ...DEFAULT_BUTTON_STYLE }
+  return {
+    shape: pick(BUTTON_SHAPES, value.shape, DEFAULT_BUTTON_STYLE.shape),
+    variant: pick(BUTTON_VARIANTS, value.variant, DEFAULT_BUTTON_STYLE.variant),
+    shadow: pick(BUTTON_SHADOWS, value.shadow, DEFAULT_BUTTON_STYLE.shadow),
+  }
+}
+
+export function buttonRadius(shape) {
+  return (BUTTON_SHAPES.find((option) => option.value === shape) || BUTTON_SHAPES[1]).radius
+}
+
+export function buttonBorderWidth(variant) {
+  return variant === 'outline' || variant === 'neon' ? 2 : 1
+}
+
+// Sombra final del botón. El acabado neón siempre añade su resplandor.
+export function buttonShadow(style = {}, theme, borderColor) {
+  const base = style.shadow === 'solid'
+    ? `5px 5px 0 ${theme.border}`
+    : style.shadow === 'none'
+      ? ''
+      : '0 8px 24px rgba(0,0,0,.14)'
+  if (style.variant === 'neon') {
+    const glow = `0 0 14px color-mix(in srgb, ${borderColor} 70%, transparent), inset 0 0 10px color-mix(in srgb, ${borderColor} 35%, transparent)`
+    return base ? `${glow}, ${base}` : glow
+  }
+  return base || 'none'
+}

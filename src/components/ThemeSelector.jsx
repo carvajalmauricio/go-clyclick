@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
-import { THEME_LIST } from '../utils/themes.js'
+import { BACKGROUND_PATTERNS, THEME_LIST } from '../utils/themes.js'
+import { BUTTON_SHADOWS, BUTTON_SHAPES, BUTTON_VARIANTS, buttonRadius } from '../utils/buttonStyles.js'
 import { uploadMedia } from '../utils/api.js'
 
 export default function ThemeSelector({ value, customColors, background, buttonStyle, slug, onChange, onCustomChange, onBackgroundChange, onButtonStyleChange }) {
@@ -84,8 +85,8 @@ export default function ThemeSelector({ value, customColors, background, buttonS
         {error && <p className="mt-2 text-xs text-red-400">{error}</p>}
         <div className="mt-4">
           <p className="mb-2 text-xs text-gray-400">Formas y texturas</p>
-          <div className="grid grid-cols-4 gap-2">
-            {[["none", "Ninguna"], ["shapes", "Formas"], ["grid", "Cuadrícula"], ["glow", "Luces"]].map(([pattern, label]) => <button key={pattern} type="button" onClick={() => onBackgroundChange({ ...bg, pattern })} className={`rounded-lg border px-2 py-2 text-[11px] ${bg.pattern === pattern ? 'border-clickclick-orange text-clickclick-orange' : 'border-gray-700 text-gray-400'}`}>{label}</button>)}
+          <div className="grid grid-cols-3 gap-2">
+            {BACKGROUND_PATTERNS.map(({ value: pattern, label }) => <button key={pattern} type="button" onClick={() => onBackgroundChange({ ...bg, pattern })} className={`rounded-lg border px-2 py-2 text-[11px] ${bg.pattern === pattern ? 'border-clickclick-orange text-clickclick-orange' : 'border-gray-700 text-gray-400'}`}>{label}</button>)}
           </div>
         </div>
         {['image', 'video'].includes(bg.type) && <label className="mt-4 flex flex-col gap-1 text-xs text-gray-400">Oscurecer fondo: {Math.round(Number(bg.overlay ?? .25) * 100)}%<input type="range" min="0" max="0.75" step="0.05" value={bg.overlay ?? .25} onChange={(event) => onBackgroundChange({ ...bg, overlay: Number(event.target.value) })} /></label>}
@@ -94,9 +95,9 @@ export default function ThemeSelector({ value, customColors, background, buttonS
 
       <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-clickclick-orange">Estilo de botones</p>
-        <SelectButtons label="Forma" value={buttons.shape || 'rounded'} options={[["square", "Recto"], ["rounded", "Redondeado"], ["pill", "Píldora"]]} onChange={(shape) => onButtonStyleChange({ ...buttons, shape })} />
-        <SelectButtons label="Acabado" value={buttons.variant || 'filled'} options={[["filled", "Relleno"], ["outline", "Borde"], ["glass", "Cristal"]]} onChange={(variant) => onButtonStyleChange({ ...buttons, variant })} />
-        <SelectButtons label="Sombra" value={buttons.shadow || 'soft'} options={[["none", "Sin sombra"], ["soft", "Suave"], ["solid", "Sólida"]]} onChange={(shadow) => onButtonStyleChange({ ...buttons, shadow })} />
+        <SelectButtons label="Forma" value={buttons.shape || 'rounded'} options={BUTTON_SHAPES} onChange={(shape) => onButtonStyleChange({ ...buttons, shape })} renderIcon={(option) => <span aria-hidden="true" className="mx-auto mb-1 block h-4 w-9 border-2 border-current" style={{ borderRadius: buttonRadius(option.value) }} />} />
+        <SelectButtons label="Acabado" value={buttons.variant || 'filled'} options={BUTTON_VARIANTS} onChange={(variant) => onButtonStyleChange({ ...buttons, variant })} renderIcon={(option) => <VariantSwatch variant={option.value} />} />
+        <SelectButtons label="Sombra" value={buttons.shadow || 'soft'} options={BUTTON_SHADOWS} onChange={(shadow) => onButtonStyleChange({ ...buttons, shadow })} />
       </div>
     </div>
   )
@@ -106,6 +107,36 @@ function Color({ label, value, onChange }) {
   return <label className="flex flex-col gap-1 text-xs text-gray-400">{label}<input type="color" value={value} onChange={(event) => onChange(event.target.value)} className="h-9 w-full cursor-pointer rounded bg-transparent" /></label>
 }
 
-function SelectButtons({ label, value, options, onChange }) {
-  return <div className="mb-3"><p className="mb-1 text-xs text-gray-400">{label}</p><div className="grid grid-cols-3 gap-2">{options.map(([option, text]) => <button key={option} type="button" onClick={() => onChange(option)} className={`rounded-lg border px-2 py-2 text-xs ${value === option ? 'border-clickclick-orange text-clickclick-orange' : 'border-gray-700 text-gray-300'}`}>{text}</button>)}</div></div>
+function SelectButtons({ label, value, options, onChange, renderIcon }) {
+  return (
+    <div className="mb-3">
+      <p className="mb-1 text-xs text-gray-400">{label}</p>
+      <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            onClick={() => onChange(option.value)}
+            aria-pressed={value === option.value}
+            className={`rounded-lg border px-2 py-2 text-xs ${value === option.value ? 'border-clickclick-orange bg-clickclick-orange/10 text-clickclick-orange' : 'border-gray-700 text-gray-300 hover:border-gray-500'}`}
+          >
+            {renderIcon?.(option)}
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// Miniatura del acabado para reconocerlo de un vistazo.
+function VariantSwatch({ variant }) {
+  const styles = {
+    filled: { background: '#F49120' },
+    outline: { border: '2px solid currentColor' },
+    glass: { background: 'rgba(255,255,255,.25)', border: '1px solid rgba(255,255,255,.4)' },
+    gradient: { background: 'linear-gradient(135deg, #F49120, #a855f7)' },
+    neon: { border: '2px solid #5eead4', boxShadow: '0 0 8px #5eead4, inset 0 0 4px #5eead4' },
+  }
+  return <span aria-hidden="true" className="mx-auto mb-1 block h-4 w-9 rounded" style={styles[variant]} />
 }

@@ -9,8 +9,9 @@ import { getProfileSections } from '../utils/banking.js'
 import { getButtonColors } from '../utils/buttonColors.js'
 import BankLogo from './BankLogo.jsx'
 import BankAccountDialog from './BankAccountDialog.jsx'
-import { animationClass } from '../utils/animations.js'
+import { animationClass, innerAnimationClass } from '../utils/animations.js'
 import HeroCarousel from './HeroCarousel.jsx'
+import { buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
 
 // Vista de presentación del perfil de un negocio.
 // Se usa en la página pública y dentro del simulador móvil del admin.
@@ -95,13 +96,14 @@ function ActionGroup({ actions, business, theme }) {
 function ActionCard({ action, business, theme }) {
   const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
-  const radius = style.shape === 'square' ? 8 : style.shape === 'pill' ? 999 : 16
+  const radius = buttonRadius(style.shape)
   const colors = getButtonColors(action, theme, style)
   const background = colors.background
   const color = colors.text
-  const border = `${style.variant === 'outline' ? 2 : 1}px solid ${colors.border}`
-  const shadow = style.shadow === 'solid' ? `5px 5px 0 ${theme.border}` : style.shadow === 'none' ? 'none' : '0 8px 24px rgba(0,0,0,.14)'
+  const border = `${buttonBorderWidth(style.variant)}px solid ${colors.border}`
+  const shadow = buttonShadow(style, theme, colors.border)
   const animation = animationClass(action.animation)
+  const innerAnimation = innerAnimationClass(action.animation)
   const cardStyle = { background, color, border, borderRadius: radius, boxShadow: shadow }
 
   const content = action.layout === 'featured' ? (
@@ -130,7 +132,7 @@ function ActionCard({ action, business, theme }) {
     </>
   )
 
-  const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} w-full font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015]`
+  const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} w-full font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
   return (
     <div className={`w-full ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
