@@ -15,7 +15,7 @@ export default function ButtonColorFields({ business, action, onChange }) {
             <input
               type="color"
               aria-label={`${label} del botón`}
-              value={/^#[0-9a-f]{6}$/i.test(effective[key]) ? effective[key] : key === 'text' ? '#ffffff' : '#1c1c22'}
+              value={colors[key] || hexOr(effective[key], fallbackFor(key, action, theme))}
               onInput={(event) => onChange({ ...colors, [key]: event.target.value })}
               onChange={(event) => onChange({ ...colors, [key]: event.target.value })}
               className="h-9 w-full cursor-pointer rounded border border-gray-600 bg-gray-800 p-1"
@@ -26,4 +26,14 @@ export default function ButtonColorFields({ business, action, onChange }) {
       <button type="button" disabled={!Object.keys(colors).length} onClick={() => onChange({})} className="mt-2 text-xs text-gray-400 underline disabled:opacity-40">Usar colores del tema</button>
     </fieldset>
   )
+}
+
+const isHex = (value) => /^#[0-9a-f]{6}$/i.test(String(value || ''))
+const hexOr = (value, fallback) => (isHex(value) ? value : fallback)
+
+// Para acabados cuyo color efectivo no es un hex (degradados, transparencias),
+// el selector parte del color base del tema.
+function fallbackFor(key, action, theme) {
+  const candidate = key === 'text' ? theme.text : key === 'border' ? theme.accent : action.primary ? theme.accent : theme.card
+  return hexOr(candidate, key === 'text' ? '#ffffff' : '#1c1c22')
 }

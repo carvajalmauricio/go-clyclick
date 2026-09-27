@@ -101,9 +101,45 @@ export const THEMES = {
     card: 'rgba(255,255,255,.12)',
     border: 'rgba(255,255,255,.5)',
   },
+  ocean: {
+    id: 'ocean',
+    name: 'Ocean Waves',
+    bg: '#0c4a6e',
+    bgGradient: 'linear-gradient(170deg, #0e7490 0%, #0c4a6e 55%, #082f49 100%)',
+    pattern: 'waves',
+    text: '#f0f9ff',
+    subtext: '#bae6fd',
+    accent: '#5eead4',
+    accentText: '#083344',
+    card: 'rgba(8,47,73,.72)',
+    border: 'rgba(186,230,253,.35)',
+  },
+  geopop: {
+    id: 'geopop',
+    name: 'Geo Pop',
+    bg: '#fff7ed',
+    bgGradient: 'linear-gradient(160deg, #fffbeb 0%, #ffedd5 100%)',
+    pattern: 'geo',
+    text: '#1f2937',
+    subtext: '#57534e',
+    accent: '#7c3aed',
+    accentText: '#ffffff',
+    card: '#ffffff',
+    border: '#e7e5e4',
+  },
 }
 
 export const THEME_LIST = Object.values(THEMES)
+
+// Formas y texturas del fondo. Compartido por el editor y la validación al guardar.
+export const BACKGROUND_PATTERNS = [
+  { value: 'none', label: 'Ninguna' },
+  { value: 'shapes', label: 'Formas' },
+  { value: 'grid', label: 'Cuadrícula' },
+  { value: 'glow', label: 'Luces' },
+  { value: 'waves', label: 'Ondas' },
+  { value: 'geo', label: 'Geométrico' },
+]
 
 // Devuelve un tema por id, con soporte para tema personalizado.
 // Si theme === 'custom', usa customColors para el fondo y el acento, y calcula

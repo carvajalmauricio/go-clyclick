@@ -88,34 +88,97 @@ function Carousel({ slides, business, theme, compact, interval }) {
     return () => clearTimeout(id)
   }, [pos, dragging, interval, next])
 
-  function onPointerDown(event) {
-    if (event.pointerType === 'mouse' && event.button !== 0) return
-    drag.current = { x: event.clientX, y: event.clientY, width: event.currentTarget.offsetWidth, horizontal: null }
-    setDragging(true)
-  }
+  // --- Gestos -------------------------------------------------------------
+  // El dedo usa eventos táctiles nativos (no pasivos) para poder bloquear el
+  // scroll de la página solo cuando el gesto es horizontal; esto funciona igual
+  // en Android y iOS. El mouse usa pointer events. Los datos del gesto viven en
+  // una ref para que al soltar siempre se lea el desplazamiento real.
+  const viewport = useRef(null)
+  const actions = useRef({})
+  actions.current = { next, prev }
 
-  function onPointerMove(event) {
-    const state = drag.current
-    if (!state) return
-    const dx = event.clientX - state.x
-    const dy = event.clientY - state.y
-    if (state.horizontal === null && (Math.abs(dx) > 6 || Math.abs(dy) > 6)) {
-      state.horizontal = Math.abs(dx) > Math.abs(dy)
-      if (state.horizontal) event.currentTarget.setPointerCapture?.(event.pointerId)
+  useEffect(() => {
+    const el = viewport.current
+    if (!el) return
+
+    function start(x, y) {
+      drag.current = { x, y, dx: 0, width: el.offsetWidth || 1, horizontal: null, samples: [{ x, t: performance.now() }] }
     }
-    if (state.horizontal) setDragX(dx)
-  }
 
-  function endDrag() {
-    const state = drag.current
-    drag.current = null
-    setDragging(false)
-    if (!state) return
-    const threshold = Math.min(SWIPE_THRESHOLD, state.width * 0.2)
-    if (dragX <= -threshold) next()
-    else if (dragX >= threshold) prev()
-    setDragX(0)
-  }
+    // Devuelve true si el gesto es horizontal (y por tanto lo controla el carrusel).
+    function move(x, y) {
+      const state = drag.current
+      if (!state) return false
+      const dx = x - state.x
+      const dy = y - state.y
+      if (state.horizontal === null) {
+        if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return false
+        state.horizontal = Math.abs(dx) > Math.abs(dy)
+        if (!state.horizontal) {
+          drag.current = null // gesto vertical: dejar que la página haga scroll
+          return false
+        }
+        setDragging(true)
+      }
+      state.dx = dx
+      state.samples.push({ x, t: performance.now() })
+      if (state.samples.length > 5) state.samples.shift()
+      setDragX(dx)
+      return true
+    }
+
+    function end() {
+      const state = drag.current
+      drag.current = null
+      if (!state?.horizontal) return
+      const first = state.samples[0]
+      const last = state.samples[state.samples.length - 1]
+      const velocity = (last.x - first.x) / Math.max(1, last.t - first.t) // px/ms
+      const threshold = Math.min(SWIPE_THRESHOLD, state.width * 0.2)
+      const flick = Math.abs(velocity) > 0.35 && Math.abs(state.dx) > 12
+      setDragging(false)
+      setDragX(0)
+      if (state.dx <= -threshold || (flick && velocity < 0)) actions.current.next()
+      else if (state.dx >= threshold || (flick && velocity > 0)) actions.current.prev()
+    }
+
+    const onTouchStart = (event) => {
+      if (event.touches.length !== 1) { drag.current = null; return }
+      start(event.touches[0].clientX, event.touches[0].clientY)
+    }
+    const onTouchMove = (event) => {
+      if (event.touches.length !== 1) return
+      if (move(event.touches[0].clientX, event.touches[0].clientY) && event.cancelable) event.preventDefault()
+    }
+    const onMouseDown = (event) => {
+      if (event.pointerType !== 'mouse' || event.button !== 0) return
+      event.preventDefault() // evita seleccionar texto o arrastrar imágenes
+      start(event.clientX, event.clientY)
+      const onMove = (e) => move(e.clientX, e.clientY)
+      const onUp = () => {
+        window.removeEventListener('pointermove', onMove)
+        window.removeEventListener('pointerup', onUp)
+        window.removeEventListener('pointercancel', onUp)
+        end()
+      }
+      window.addEventListener('pointermove', onMove)
+      window.addEventListener('pointerup', onUp)
+      window.addEventListener('pointercancel', onUp)
+    }
+
+    el.addEventListener('touchstart', onTouchStart, { passive: true })
+    el.addEventListener('touchmove', onTouchMove, { passive: false })
+    el.addEventListener('touchend', end)
+    el.addEventListener('touchcancel', end)
+    el.addEventListener('pointerdown', onMouseDown)
+    return () => {
+      el.removeEventListener('touchstart', onTouchStart)
+      el.removeEventListener('touchmove', onTouchMove)
+      el.removeEventListener('touchend', end)
+      el.removeEventListener('touchcancel', end)
+      el.removeEventListener('pointerdown', onMouseDown)
+    }
+  }, [])
 
   function onKeyDown(event) {
     if (event.key === 'ArrowRight') next()
@@ -136,13 +199,9 @@ function Carousel({ slides, business, theme, compact, interval }) {
       onKeyDown={onKeyDown}
     >
       <div
+        ref={viewport}
         className="w-full overflow-hidden select-none"
-        style={{ touchAction: 'pan-y', cursor: dragging ? 'grabbing' : 'grab' }}
-        onPointerDown={onPointerDown}
-        onPointerMove={onPointerMove}
-        onPointerUp={endDrag}
-        onPointerCancel={endDrag}
-        onLostPointerCapture={() => drag.current && endDrag()}
+        style={{ touchAction: 'pan-y', cursor: dragging ? 'grabbing' : 'grab', WebkitUserSelect: 'none' }}
       >
         <div
           className="flex w-full"

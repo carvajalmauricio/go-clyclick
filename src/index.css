@@ -36,6 +36,19 @@ body {
     radial-gradient(circle at 10% 90%, rgba(192,132,252,.45), transparent 30%);
   filter: blur(10px);
 }
+.profile-pattern-waves {
+  opacity: 1;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='48' viewBox='0 0 120 48'%3E%3Cpath d='M0 16 Q15 4 30 16 T60 16 T90 16 T120 16' fill='none' stroke='white' stroke-opacity='.16' stroke-width='2'/%3E%3Cpath d='M0 40 Q15 28 30 40 T60 40 T90 40 T120 40' fill='none' stroke='white' stroke-opacity='.08' stroke-width='2'/%3E%3C/svg%3E"),
+    radial-gradient(ellipse at 85% 8%, rgba(94,234,212,.28), transparent 38%),
+    radial-gradient(ellipse at 10% 95%, rgba(125,211,252,.22), transparent 42%);
+  background-size: 120px 48px, 100% 100%, 100% 100%;
+}
+.profile-pattern-geo {
+  opacity: .55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Ccircle cx='30' cy='34' r='14' fill='%23f97316' fill-opacity='.45'/%3E%3Cpath d='M120 18 L142 56 L98 56 Z' fill='%2306b6d4' fill-opacity='.4'/%3E%3Crect x='52' y='112' width='26' height='26' rx='4' transform='rotate(20 65 125)' fill='%23a855f7' fill-opacity='.38'/%3E%3Ccircle cx='150' cy='140' r='16' fill='none' stroke='%23facc15' stroke-opacity='.75' stroke-width='5'/%3E%3Cpath d='M92 96 h12 M98 90 v12' stroke='%23f43f5e' stroke-opacity='.6' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M10 150 q10 -12 20 0 t20 0' fill='none' stroke='%2310b981' stroke-opacity='.55' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
 @keyframes profilePulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(var(--profile-pulse-scale, 1.035)); }
@@ -51,14 +64,54 @@ body {
       color-mix(in srgb, var(--profile-action-glow, #f49120) 65%, transparent);
   }
 }
+@keyframes profileHeartbeat {
+  0%, 40%, 100% { transform: scale(1); }
+  10% { transform: scale(var(--profile-beat-scale, 1.05)); }
+  20% { transform: scale(1); }
+  30% { transform: scale(var(--profile-beat-scale, 1.05)); }
+}
+@keyframes profileShake {
+  0%, 30%, 100% { transform: translateX(0) rotate(0); }
+  4%, 12%, 20% { transform: translateX(calc(var(--profile-shake-distance, 4px) * -1)) rotate(-1deg); }
+  8%, 16%, 24% { transform: translateX(var(--profile-shake-distance, 4px)) rotate(1deg); }
+}
+@keyframes profileJelly {
+  0%, 35%, 100% { transform: scale(1, 1); }
+  7% { transform: scale(var(--profile-jelly-a, 1.06), var(--profile-jelly-b, .94)); }
+  14% { transform: scale(var(--profile-jelly-b, .94), var(--profile-jelly-a, 1.06)); }
+  21% { transform: scale(1.03, .97); }
+  28% { transform: scale(.99, 1.01); }
+}
+@keyframes profileShine {
+  0% { transform: translateX(-160%) skewX(-20deg); }
+  35%, 100% { transform: translateX(260%) skewX(-20deg); }
+}
 .profile-action-pulse { animation: profilePulse 2.2s ease-in-out infinite; }
 .profile-action-bounce { animation: profileBounce 2.6s ease-in-out infinite; }
 .profile-action-glow { animation: profileGlow 2.8s ease-in-out infinite; }
+.profile-action-heartbeat { animation: profileHeartbeat 1.8s ease-in-out infinite; }
+.profile-action-shake { animation: profileShake 3.2s ease-in-out infinite; }
+.profile-action-jelly { animation: profileJelly 3s ease-in-out infinite; }
+/* El destello vive dentro del botón: el pseudo-elemento cruza y se recorta. */
+.profile-action-shine { position: relative; overflow: hidden; isolation: isolate; }
+.profile-action-shine::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,var(--profile-shine-opacity, .45)), transparent);
+  animation: profileShine 3.2s ease-in-out infinite;
+}
 @media (prefers-reduced-motion: reduce) {
-  /* Reducir amplitud y velocidad sin reemplazar los tres efectos por uno solo. */
+  /* Reducir amplitud y velocidad sin reemplazar los efectos por uno solo. */
   .profile-action-pulse { --profile-pulse-scale: 1.008; animation-duration: 4s; }
   .profile-action-bounce { --profile-float-distance: -1.5px; animation-duration: 4.4s; }
   .profile-action-glow { --profile-glow-blur: 8px; --profile-glow-spread: 1px; animation-duration: 4.8s; }
+  .profile-action-heartbeat { --profile-beat-scale: 1.01; animation-duration: 3.6s; }
+  .profile-action-shake { --profile-shake-distance: 1px; animation-duration: 6s; }
+  .profile-action-jelly { --profile-jelly-a: 1.01; --profile-jelly-b: .99; animation-duration: 6s; }
+  .profile-action-shine::after { --profile-shine-opacity: .2; animation-duration: 6s; }
 }
 
 /* ---------------------------------------------------------------------------
