@@ -3,6 +3,10 @@ import { useParams } from 'react-router-dom'
 import ProfileView from '../components/ProfileView.jsx'
 import AgeGate from '../components/AgeGate.jsx'
 import NotFound from './NotFound.jsx'
+import { shouldAdoptFresh } from '../utils/reconcileBusiness.js'
+
+// Re-exporta el helper puro para compatibilidad con importadores previos.
+export { shouldAdoptFresh }
 
 // Lee el negocio incrustado en el HTML (window.__BUSINESS__) solo si su slug
 // coincide con la ruta actual. Así una navegación posterior dentro de la SPA
@@ -14,14 +18,45 @@ function readInlinedBusiness(slug) {
   return null
 }
 
+// Lee la config ligera de la puerta de edad incrustada en el HTML
+// (window.__AGE_GATE__). Para perfiles con puerta de edad el servidor NO
+// incrusta el negocio completo; en su lugar deja solo esta config no sensible
+// (tema, idiomas y textos de la puerta) para poder pintar la puerta al instante
+// y diferir la carga del negocio completo hasta que el visitante confirme.
+function readInlinedGate(slug) {
+  if (typeof window === 'undefined') return null
+  const hint = window.__AGE_GATE__
+  if (hint && typeof hint === 'object' && hint.slug === slug && hint.ageGate?.enabled === true) return hint
+  return null
+}
+
+// ¿El visitante ya confirmó la edad de este slug en la sesión actual? (misma
+// clave que usa AgeGate). Si es así, el negocio completo se puede cargar sin
+// mostrar de nuevo la puerta.
+function gateAlreadyConfirmed(slug) {
+  try {
+    return typeof window !== 'undefined' && window.sessionStorage?.getItem(`clyclick:agegate:${slug}`) === '1'
+  } catch {
+    return false
+  }
+}
+
 export default function PublicProfile() {
   const { slug } = useParams()
-  // Estado inicial perezoso: si el perfil ya viene incrustado en el HTML para
-  // este slug, pintamos al instante sin skeleton ni fetch. En Vite dev o en
-  // navegación SPA (sin dato incrustado) usamos la ruta de fetch habitual.
+  // Estado inicial perezoso:
+  //   - Si el perfil completo viene incrustado para este slug, pintamos al
+  //     instante (sin skeleton ni fetch).
+  //   - Si viene la config de puerta de edad (perfil gated), mostramos la
+  //     puerta al instante con esa config ligera y NO pedimos el negocio
+  //     completo hasta que el visitante confirme la edad. Así ningún dato
+  //     sensible viaja al cliente antes de la confirmación.
+  //   - En Vite dev o navegación SPA (sin dato incrustado) usamos fetch.
   const [state, setState] = useState(() => {
     const inlined = readInlinedBusiness(slug)
-    return inlined ? { status: 'ready', business: inlined } : { status: 'loading', business: null }
+    if (inlined) return { status: 'ready', business: inlined }
+    const gate = readInlinedGate(slug)
+    if (gate) return { status: 'gated', business: gate }
+    return { status: 'loading', business: null }
   })
 
   useEffect(() => {
@@ -38,13 +73,44 @@ export default function PublicProfile() {
           const fresh = await res.json()
           // Reconciliación barata: comparamos la serialización. Si el servidor
           // devuelve algo distinto al snapshot incrustado, adoptamos lo fresco.
-          if (fresh && fresh.slug === slug && JSON.stringify(fresh) !== JSON.stringify(inlined)) {
+          if (shouldAdoptFresh(fresh, inlined, slug)) {
             setState({ status: 'ready', business: fresh })
           }
         })
         .catch(() => {
           // Fallo de red en la revalidación: mantenemos el pintado instantáneo.
         })
+      return () => {
+        active = false
+      }
+    }
+
+    // Perfil con puerta de edad incrustada: NO pedimos el negocio completo aún.
+    // La carga se difiere a confirmGate(), que se dispara al confirmar la edad.
+    // Excepción: si el visitante ya confirmó en esta sesión, la puerta no vuelve
+    // a mostrarse, así que cargamos el negocio completo de una vez.
+    if (readInlinedGate(slug)) {
+      if (gateAlreadyConfirmed(slug)) {
+        setState({ status: 'loading', business: null })
+        fetch(`/api/business/${encodeURIComponent(slug)}`)
+          .then(async (res) => {
+            if (!active) return
+            if (res.status === 404) {
+              setState({ status: 'notfound', business: null })
+              return
+            }
+            if (!res.ok) throw new Error(`HTTP ${res.status}`)
+            const data = await res.json()
+            setState({ status: 'ready', business: data })
+          })
+          .catch(() => {
+            if (active) setState({ status: 'error', business: null })
+          })
+        return () => {
+          active = false
+        }
+      }
+      setState({ status: 'gated', business: readInlinedGate(slug) })
       return () => {
         active = false
       }
@@ -71,6 +137,36 @@ export default function PublicProfile() {
       active = false
     }
   }, [slug])
+
+  // Se ejecuta cuando el visitante confirma la edad en la puerta incrustada.
+  // Recién ahí pedimos el negocio completo a la API pública.
+  function confirmGate() {
+    fetch(`/api/business/${encodeURIComponent(slug)}`)
+      .then(async (res) => {
+        if (res.status === 404) {
+          setState({ status: 'notfound', business: null })
+          return
+        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`)
+        const data = await res.json()
+        setState({ status: 'ready', business: data })
+      })
+      .catch(() => {
+        setState({ status: 'error', business: null })
+      })
+  }
+
+  if (state.status === 'gated') {
+    // Puerta de edad pintada desde la config ligera. Al confirmar se dispara
+    // confirmGate() (carga diferida) y el estado pasa a 'ready'. Mientras la
+    // carga está en curso, AgeGate ya está confirmada, así que revela children,
+    // que muestra el skeleton hasta que llega el negocio completo.
+    return (
+      <AgeGate business={state.business} onConfirm={confirmGate}>
+        <ProfileSkeleton />
+      </AgeGate>
+    )
+  }
 
   if (state.status === 'loading') return <ProfileSkeleton />
   if (state.status === 'notfound') return <NotFound slug={slug} />

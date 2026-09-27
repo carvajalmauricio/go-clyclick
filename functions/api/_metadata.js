@@ -51,13 +51,30 @@ export async function addProfileMetadata(response, request, env) {
   const metadata = profileMetadata(business, url.origin)
   // Puerta de edad (#19): si está activa, NO se incrusta el negocio en el HTML.
   // De lo contrario el contenido sensible viajaría en el código fuente antes de
-  // confirmar la edad (la puerta sería solo cosmética). Al omitir el payload, el
-  // cliente cae a la ruta de fetch, que solo se ejecuta tras confirmar la edad.
+  // confirmar la edad (la puerta sería solo cosmética). Se incrusta solo la
+  // config no sensible de la puerta; el cliente difiere el fetch del negocio
+  // completo hasta que el visitante confirma la edad (ver PublicProfile.jsx).
   const ageGated = business?.ageGate?.enabled === true
   // Incrusta el negocio completo para que el cliente pinte el perfil al
   // instante (sin fetch ni skeleton) al escanear el QR. El payload va escapado
   // para no poder romper la etiqueta <script>.
-  const dataScript = ageGated ? '' : `<script>window.__BUSINESS__=${serializeBusinessScript(business)};</script>`
+  // Para perfiles con puerta de edad se incrusta en su lugar SOLO la
+  // configuración no sensible de la puerta (window.__AGE_GATE__): idioma, tema
+  // y textos de la puerta. Así el cliente puede pintar la puerta al instante y
+  // difiere la carga del negocio completo hasta después de confirmar la edad,
+  // de modo que ningún dato sensible viaja al cliente antes de la confirmación.
+  const gateHint = ageGated
+    ? {
+        slug: business.slug,
+        theme: business.theme,
+        customColors: business.customColors,
+        languages: business.languages,
+        ageGate: business.ageGate,
+      }
+    : null
+  const dataScript = ageGated
+    ? `<script>window.__AGE_GATE__=${serializeBusinessScript(gateHint)};</script>`
+    : `<script>window.__BUSINESS__=${serializeBusinessScript(business)};</script>`
   const rewriter = new HTMLRewriter()
     .on('title', { element(element) { element.setInnerContent(metadata.title) } })
     .on('meta[name="description"]', { element(element) { element.setAttribute('content', metadata.description) } })

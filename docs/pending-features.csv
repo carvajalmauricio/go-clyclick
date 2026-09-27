@@ -9,3 +9,4 @@ Complementos,Insignia de verificado,"Mostrar una insignia de verificado junto al
 Complementos,Abrir en app (deep links),"Deep links desde navegadores in-app (Instagram/TikTok) hacia WhatsApp o Google Maps para abrir la app nativa.",pendiente,Backlog #15
 Complementos,Quitar Powered by ClyClick,"Permitir ocultar el sello 'Powered by ClyClick' como beneficio de un plan de pago.",pendiente,Backlog #20
 Opcional,Embeds dentro del perfil,"Reproducir contenido incrustado (YouTube/TikTok/Maps/Spotify) dentro del perfil sin salir de la pagina.",pendiente,Backlog #5 - diferido en FEAT-004
+Complementos,Control de acceso real para puerta de edad,"La puerta de edad (#19) difiere la carga de /api/business/:slug hasta confirmar (ningun dato sensible viaja antes de confirmar), pero el endpoint sigue siendo publico. Para control de acceso duro haria falta gating en el servidor (token/sesion).",pendiente,Nota de review v2 - la puerta es un freno de UX no control de acceso

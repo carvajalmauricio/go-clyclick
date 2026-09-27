@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { resolveTheme, getBackgroundStyle } from '../utils/themes.js'
 import { t } from '../utils/i18n.js'
+import { pickGateLanguage } from '../utils/gateLanguage.js'
+
+// Re-exporta el helper puro para compatibilidad con importadores previos.
+export { pickGateLanguage }
 
 // Clave de sessionStorage por slug para recordar que ya se confirmó la edad.
 function storageKey(slug) {
@@ -15,30 +19,20 @@ function alreadyConfirmed(slug) {
   }
 }
 
-// Elige el idioma de la puerta de edad. La puerta aparece antes de que exista
-// el selector de idioma del perfil, así que respeta el idioma del visitante:
-// usa 'en' solo si está entre los idiomas habilitados del negocio y el
-// navegador prefiere inglés; en cualquier otro caso usa el idioma por defecto
-// del perfil ('es', o 'en' si es el único configurado). Sin coincidencias, 'es'.
-export function pickGateLanguage(languages) {
-  const enabled = Array.isArray(languages) ? languages.filter((l) => l === 'es' || l === 'en') : []
-  const hasEs = enabled.includes('es')
-  const hasEn = enabled.includes('en')
-  if (hasEn && !hasEs) return 'en'
-  if (hasEn && typeof navigator !== 'undefined') {
-    const prefers = String(navigator.language || '').toLowerCase()
-    if (prefers.startsWith('en')) return 'en'
-  }
-  return 'es'
-}
-
 // Puerta de edad / contenido sensible (#19). Bloquea el perfil detrás de una
 // confirmación a pantalla completa. Al confirmar, revela el perfil y lo recuerda
 // en sessionStorage. Al rechazar, redirige fuera del perfil.
 // Los textos fijos vienen del diccionario i18n; el idioma lo decide
 // pickGateLanguage (respeta el idioma del visitante si el negocio lo habilita).
 // El mensaje personalizado del comerciante se muestra tal cual si existe.
-export default function AgeGate({ business, children }) {
+// Props:
+//   business  perfil (o config ligera de la puerta) para pintar la puerta.
+//   children  contenido a revelar tras confirmar (perfil completo).
+//   onConfirm callback opcional que se dispara al confirmar la edad. Permite a
+//             la página diferir la carga del negocio completo hasta después de
+//             la confirmación (la puerta no es control de acceso duro, pero así
+//             ningún dato sensible se pide antes de confirmar).
+export default function AgeGate({ business, children, onConfirm }) {
   const gate = business?.ageGate
   const enabled = gate?.enabled === true
   const slug = business?.slug || ''
@@ -57,6 +51,7 @@ export default function AgeGate({ business, children }) {
     } catch {
       /* sessionStorage puede no estar disponible; se ignora. */
     }
+    if (typeof onConfirm === 'function') onConfirm()
     setConfirmed(true)
   }
 

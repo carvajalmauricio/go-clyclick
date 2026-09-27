@@ -182,9 +182,12 @@ test('addProfileMetadata NO incrusta el negocio cuando la puerta de edad está a
       makeEnv(records),
     )
     const html = await response.text()
-    // No hay payload incrustado ni el contenido sensible en el código fuente.
+    // No hay payload completo incrustado ni el contenido sensible en el código fuente.
     assert.doesNotMatch(html, /window\.__BUSINESS__/)
     assert.doesNotMatch(html, /ContenidoSensibleSecreto/)
+    // Sí se incrusta la config no sensible de la puerta para pintarla al instante.
+    assert.match(html, /window\.__AGE_GATE__/)
+    assert.match(html, /"enabled":true/)
     // Los metadatos (título) sí se aplican, para SEO/preview de la ruta.
     assert.match(html, /Bar Nocturno/)
   } finally {
