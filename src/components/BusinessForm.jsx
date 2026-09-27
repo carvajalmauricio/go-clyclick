@@ -4,11 +4,24 @@ import ActionManager from './ActionManager.jsx'
 import BankAccountManager from './BankAccountManager.jsx'
 import HeroSlidesManager from './HeroSlidesManager.jsx'
 import { uploadLogo } from '../utils/api.js'
-import { resolveTheme } from '../utils/themes.js'
+import { resolveTheme, THEME_LIST } from '../utils/themes.js'
+import { getActionSettings } from '../utils/links.js'
+import { Field, FileButton, SectionCard, SubHeading, inputCls } from './admin/ui.jsx'
+
+// Secciones del formulario. El editor las usa también para la navegación rápida.
+export const FORM_SECTIONS = [
+  { id: 'basic', icon: 'store', title: 'Información básica', short: 'Básico', description: 'Nombre, logo, categoría y descripción del negocio.' },
+  { id: 'slides', icon: 'slides', title: 'Slides de presentación', short: 'Slides', description: 'Rota la tarjeta de presentación con servicios o platos.' },
+  { id: 'actions', icon: 'cursor', title: 'Botones de acción', short: 'Botones', description: 'Destinos, orden, estilo y secciones de los botones.' },
+  { id: 'bank', icon: 'bank', title: 'Datos bancarios', short: 'Bancos', description: 'Cuentas para transferencias y enlaces de pago.' },
+  { id: 'contact', icon: 'contact', title: 'Contacto y redes', short: 'Contacto', description: 'Datos del contacto descargable (vCard) y redes sociales.' },
+  { id: 'design', icon: 'palette', title: 'Diseño', short: 'Diseño', description: 'Tema, fondo y estilo de los botones.' },
+]
 
 // Formulario controlado de configuración de negocio.
 // `value` es el objeto negocio; `onChange(patch)` aplica cambios parciales.
-export default function BusinessForm({ value, onChange, isEdit }) {
+// `openSections` (Set) y `onToggleSection(id)` controlan qué tarjetas están abiertas.
+export default function BusinessForm({ value, onChange, isEdit, openSections, onToggleSection }) {
   const b = value
   const theme = resolveTheme(b.theme, b.customColors)
   const [uploading, setUploading] = useState(false)
@@ -35,138 +48,165 @@ export default function BusinessForm({ value, onChange, isEdit }) {
     }
   }
 
+  const summaries = getSummaries(b)
+  const card = (id) => {
+    const meta = FORM_SECTIONS.find((section) => section.id === id)
+    return {
+      id: `section-${id}`,
+      icon: meta.icon,
+      title: meta.title,
+      description: meta.description,
+      summary: summaries[id],
+      open: openSections.has(id),
+      onToggle: () => onToggleSection(id),
+    }
+  }
+
   return (
-    <div className="flex flex-col gap-5 text-sm">
-      <Section title="Información básica">
-        <Field label="Nombre del negocio *">
-          <input className={inputCls} value={b.name || ''} onChange={set('name')} placeholder="Pizzería Napoli" />
-        </Field>
-        <Field label="Slug (URL)">
-          <input
-            className={inputCls}
-            value={b.slug || ''}
-            onChange={set('slug')}
-            placeholder="pizzeria-napoli"
-            disabled={isEdit}
-          />
-          {isEdit && <span className="text-xs text-gray-500">El slug no se puede cambiar al editar.</span>}
-        </Field>
-        <Field label="Categoría">
-          <input className={inputCls} value={b.category || ''} onChange={set('category')} placeholder="Restaurante" />
-        </Field>
-        <Field label="Descripción / Eslogan">
-          <textarea className={inputCls} rows={2} value={b.description || ''} onChange={set('description')} />
-        </Field>
-        <div className="flex flex-wrap items-end gap-3">
-          <Field label="Color de la descripción">
-            <input
-              type="color"
-              value={b.descriptionColor || theme.subtext}
-              onInput={set('descriptionColor')}
-              onChange={set('descriptionColor')}
-              className="h-10 w-16 cursor-pointer rounded-lg border border-gray-600 bg-gray-800 p-1"
-            />
+    <div className="flex flex-col gap-4 text-sm">
+      <SectionCard {...card('basic')}>
+        <div className="flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-950/40 p-3">
+          <div
+            className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gray-800"
+            style={{ borderColor: theme.accent }}
+          >
+            {b.logo ? (
+              <img src={b.logo} alt="Logo" className="h-full w-full object-cover" />
+            ) : (
+              <span className="text-lg font-bold text-gray-500">{initials(b.name)}</span>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-xs font-medium text-gray-300">Logo del negocio</p>
+            <p className="mb-2 text-[11px] text-gray-500">PNG, JPG, WEBP, SVG o GIF. Ideal cuadrado.</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <FileButton
+                label={b.logo ? 'Cambiar logo' : 'Subir logo'}
+                busy={uploading}
+                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
+                onFile={onLogoFile}
+              />
+              {b.logo && !uploading && (
+                <button type="button" onClick={() => onChange({ logo: '' })} className="px-2 text-xs text-gray-400 hover:text-white">
+                  Quitar
+                </button>
+              )}
+            </div>
+            {uploadError && <p role="alert" className="mt-1 text-xs text-red-400">{uploadError}</p>}
+          </div>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Nombre del negocio *" className="sm:col-span-2">
+            <input className={inputCls} value={b.name || ''} onChange={set('name')} placeholder="Pizzería Napoli" />
           </Field>
+          <Field
+            label="Dirección web (slug)"
+            hint={isEdit ? 'La dirección no se puede cambiar al editar.' : 'Si lo dejas vacío se genera a partir del nombre.'}
+          >
+            <div className={`${inputCls} flex items-center gap-0.5 ${isEdit ? 'opacity-60' : ''}`}>
+              <span className="shrink-0 text-gray-500">/</span>
+              <input
+                className="min-w-0 flex-1 bg-transparent text-white placeholder-gray-500 focus:outline-none disabled:cursor-not-allowed"
+                value={b.slug || ''}
+                onChange={set('slug')}
+                placeholder="pizzeria-napoli"
+                disabled={isEdit}
+                aria-label="Slug (URL)"
+              />
+            </div>
+          </Field>
+          <Field label="Categoría">
+            <input className={inputCls} value={b.category || ''} onChange={set('category')} placeholder="Restaurante" />
+          </Field>
+          <Field label="Descripción / Eslogan" className="sm:col-span-2">
+            <textarea className={inputCls} rows={2} value={b.description || ''} onChange={set('description')} placeholder="La mejor pizza al horno de leña" />
+          </Field>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-medium text-gray-300">Color de la descripción</span>
+          <input
+            type="color"
+            aria-label="Color de la descripción"
+            value={b.descriptionColor || theme.subtext}
+            onInput={set('descriptionColor')}
+            onChange={set('descriptionColor')}
+            className="h-9 w-12 cursor-pointer rounded-lg border border-gray-700 bg-gray-800 p-1"
+          />
           <button
             type="button"
             onClick={() => onChange({ descriptionColor: '' })}
             disabled={!b.descriptionColor}
-            className="py-2 text-xs text-gray-400 underline disabled:opacity-50"
+            className="text-xs text-gray-400 hover:text-white disabled:opacity-40"
           >
-            Usar color del tema
+            {b.descriptionColor ? 'Usar color del tema' : 'Usando color del tema'}
           </button>
         </div>
-        <Field label="Logo del negocio">
-          <div className="flex items-center gap-3">
-            <div className="w-14 h-14 rounded-full bg-gray-800 border border-gray-600 flex items-center justify-center overflow-hidden shrink-0">
-              {b.logo ? (
-                <img src={b.logo} alt="logo" className="w-full h-full object-cover" />
-              ) : (
-                <span className="text-gray-500 text-xs">Sin logo</span>
-              )}
-            </div>
-            <div className="flex-1">
-              <input
-                type="file"
-                accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
-                onChange={onLogoFile}
-                disabled={uploading}
-                className="block w-full text-xs text-gray-300 file:mr-3 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:bg-clickclick-orange file:text-clickclick-dark file:font-semibold file:cursor-pointer"
-              />
-              {uploading && <span className="text-xs text-clickclick-orange">Subiendo...</span>}
-              {uploadError && <span className="text-xs text-red-400">{uploadError}</span>}
-              {b.logo && !uploading && (
-                <button
-                  type="button"
-                  onClick={() => onChange({ logo: '' })}
-                  className="text-xs text-gray-400 underline mt-1"
-                >
-                  Quitar logo
-                </button>
-              )}
-            </div>
-          </div>
-        </Field>
-      </Section>
+      </SectionCard>
 
-      <Section title="Slides de presentación">
+      <SectionCard {...card('slides')}>
         <HeroSlidesManager business={b} onChange={onChange} />
-      </Section>
+      </SectionCard>
 
-      <Section title="Botones de acción">
-        <Field label="WhatsApp (con código de país)">
-          <input className={inputCls} value={b.whatsapp || ''} onChange={set('whatsapp')} placeholder="+593999999999" />
-        </Field>
-        <Field label="URL reseña Google (5 estrellas)">
-          <input className={inputCls} value={b.googleReviewUrl || ''} onChange={set('googleReviewUrl')} placeholder="https://g.page/r/.../review" />
-        </Field>
-        <Field label="Google Maps">
-          <input className={inputCls} value={b.mapsUrl || ''} onChange={set('mapsUrl')} placeholder="https://maps.google.com/?q=..." />
-        </Field>
-        <Field label="Waze">
-          <input className={inputCls} value={b.wazeUrl || ''} onChange={set('wazeUrl')} placeholder="https://waze.com/ul?..." />
-        </Field>
-        <Field label="Menú / Catálogo (PDF o enlace)">
-          <input className={inputCls} value={b.menuUrl || ''} onChange={set('menuUrl')} placeholder="https://..." />
-        </Field>
-      </Section>
-
-      <Section title="Orden y presentación">
+      <SectionCard {...card('actions')}>
+        <SubHeading>Destinos</SubHeading>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="WhatsApp (con código de país)">
+            <input className={inputCls} value={b.whatsapp || ''} onChange={set('whatsapp')} placeholder="+593999999999" inputMode="tel" />
+          </Field>
+          <Field label="Menú / Catálogo (PDF o enlace)">
+            <input className={inputCls} value={b.menuUrl || ''} onChange={set('menuUrl')} placeholder="https://..." />
+          </Field>
+          <Field label="Reseña en Google (5 estrellas)" className="sm:col-span-2">
+            <input className={inputCls} value={b.googleReviewUrl || ''} onChange={set('googleReviewUrl')} placeholder="https://g.page/r/.../review" />
+          </Field>
+          <Field label="Google Maps">
+            <input className={inputCls} value={b.mapsUrl || ''} onChange={set('mapsUrl')} placeholder="https://maps.google.com/?q=..." />
+          </Field>
+          <Field label="Waze">
+            <input className={inputCls} value={b.wazeUrl || ''} onChange={set('wazeUrl')} placeholder="https://waze.com/ul?..." />
+          </Field>
+        </div>
+        <SubHeading>Orden y presentación</SubHeading>
         <ActionManager business={b} onChange={onChange} />
-      </Section>
+      </SectionCard>
 
-      <Section title="Datos Bancarios">
+      <SectionCard {...card('bank')}>
         <BankAccountManager business={b} onChange={onChange} />
-      </Section>
+      </SectionCard>
 
-      <Section title="Contacto (vCard)">
-        <Field label="Teléfono">
-          <input className={inputCls} value={b.phone || ''} onChange={set('phone')} placeholder="+593..." />
-        </Field>
-        <Field label="Email">
-          <input className={inputCls} value={b.email || ''} onChange={set('email')} placeholder="hola@negocio.com" />
-        </Field>
-        <Field label="Sitio web">
-          <input className={inputCls} value={b.website || ''} onChange={set('website')} placeholder="negocio.com" />
-        </Field>
-      </Section>
+      <SectionCard {...card('contact')}>
+        <SubHeading>Contacto (vCard)</SubHeading>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Teléfono">
+            <input className={inputCls} value={b.phone || ''} onChange={set('phone')} placeholder="+593..." inputMode="tel" />
+          </Field>
+          <Field label="Email">
+            <input className={inputCls} type="email" value={b.email || ''} onChange={set('email')} placeholder="hola@negocio.com" />
+          </Field>
+          <Field label="Sitio web" className="sm:col-span-2">
+            <input className={inputCls} value={b.website || ''} onChange={set('website')} placeholder="negocio.com" />
+          </Field>
+        </div>
+        <SubHeading>Redes sociales</SubHeading>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Instagram (usuario o URL)">
+            <input className={inputCls} value={b.social?.instagram || ''} onChange={setSocial('instagram')} placeholder="minegocio" />
+          </Field>
+          <Field label="TikTok (usuario o URL)">
+            <input className={inputCls} value={b.social?.tiktok || ''} onChange={setSocial('tiktok')} placeholder="minegocio" />
+          </Field>
+          <Field label="Facebook (usuario o URL)">
+            <input className={inputCls} value={b.social?.facebook || ''} onChange={setSocial('facebook')} placeholder="minegocio" />
+          </Field>
+          <Field label="LinkedIn (usuario, company/nombre o URL)">
+            <input className={inputCls} value={b.social?.linkedin || ''} onChange={setSocial('linkedin')} placeholder="company/minegocio" />
+          </Field>
+        </div>
+      </SectionCard>
 
-      <Section title="Redes sociales">
-        <Field label="Instagram (usuario o URL)">
-          <input className={inputCls} value={b.social?.instagram || ''} onChange={setSocial('instagram')} placeholder="minegocio" />
-        </Field>
-        <Field label="TikTok (usuario o URL)">
-          <input className={inputCls} value={b.social?.tiktok || ''} onChange={setSocial('tiktok')} placeholder="minegocio" />
-        </Field>
-        <Field label="Facebook (usuario o URL)">
-          <input className={inputCls} value={b.social?.facebook || ''} onChange={setSocial('facebook')} placeholder="minegocio" />
-        </Field>
-        <Field label="LinkedIn (usuario, company/nombre o URL)">
-          <input className={inputCls} value={b.social?.linkedin || ''} onChange={setSocial('linkedin')} placeholder="company/minegocio" />
-        </Field>
-      </Section>
-
-      <Section title="Tema visual">
+      <SectionCard {...card('design')}>
         <ThemeSelector
           value={b.theme || 'vibrant'}
           customColors={b.customColors}
@@ -178,28 +218,34 @@ export default function BusinessForm({ value, onChange, isEdit }) {
           onBackgroundChange={(background) => onChange({ background })}
           onButtonStyleChange={(buttonStyle) => onChange({ buttonStyle })}
         />
-      </Section>
+      </SectionCard>
     </div>
   )
 }
 
-const inputCls =
-  'w-full rounded-lg bg-gray-800 border border-gray-600 px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-clickclick-orange'
-
-function Section({ title, children }) {
-  return (
-    <div>
-      <h3 className="text-clickclick-orange font-semibold mb-3 text-xs uppercase tracking-wide">{title}</h3>
-      <div className="flex flex-col gap-3">{children}</div>
-    </div>
-  )
+function initials(name) {
+  return (name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()
 }
 
-function Field({ label, children }) {
-  return (
-    <label className="flex flex-col gap-1">
-      <span className="text-gray-400 text-xs">{label}</span>
-      {children}
-    </label>
-  )
+const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
+
+// Resumen corto que se muestra cuando una tarjeta está plegada.
+function getSummaries(b) {
+  const slides = b.heroSlides?.items?.length || 0
+  const enabledActions = getActionSettings(b).filter((item) => item.enabled !== false)
+  const destinations = [b.whatsapp, b.googleReviewUrl, b.mapsUrl, b.wazeUrl, b.menuUrl].filter(Boolean).length
+  const accounts = b.bankAccounts?.length || 0
+  const socials = Object.values(b.social || {}).filter(Boolean).length
+  const contact = [b.phone, b.email, b.website].filter(Boolean).length
+  const themeName = b.theme === 'custom' ? 'Personalizado' : THEME_LIST.find((t) => t.id === b.theme)?.name || b.theme
+  return {
+    basic: [b.name || 'Sin nombre', b.category, b.logo ? 'con logo' : 'sin logo'].filter(Boolean).join(' · '),
+    slides: b.heroSlides?.enabled && slides
+      ? `Activo · ${plural(slides + 1, 'slide', 'slides')} · cada ${b.heroSlides.interval || 3} s`
+      : 'Desactivado',
+    actions: `${plural(destinations, 'destino configurado', 'destinos configurados')} · ${plural(enabledActions.length, 'botón activo', 'botones activos')}`,
+    bank: accounts ? plural(accounts, 'cuenta', 'cuentas') : 'Sin cuentas',
+    contact: `${plural(contact, 'dato de contacto', 'datos de contacto')} · ${plural(socials, 'red social', 'redes sociales')}`,
+    design: `Tema ${themeName}`,
+  }
 }

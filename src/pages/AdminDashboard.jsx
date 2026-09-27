@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
-import BusinessForm from '../components/BusinessForm.jsx'
+import BusinessForm, { FORM_SECTIONS } from '../components/BusinessForm.jsx'
+import { Icon } from '../components/Icons.jsx'
+import { IconButton, Spinner, inputCls } from '../components/admin/ui.jsx'
 import PhoneMockup from '../components/PhoneMockup.jsx'
 import QRCodeStudio from '../components/QRCodeStudio.jsx'
 import PrintableDisplay from '../components/PrintableDisplay.jsx'
@@ -124,8 +126,10 @@ function BusinessList({ setView, email }) {
   const filtered = useMemo(() => {
     if (!items) return []
     const q = query.toLowerCase().trim()
-    if (!q) return items
-    return items.filter((b) => b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q))
+    const list = q
+      ? items.filter((b) => b.name.toLowerCase().includes(q) || b.slug.toLowerCase().includes(q) || (b.category || '').toLowerCase().includes(q))
+      : items
+    return [...list].sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
   }, [items, query])
 
   async function onDelete(slug) {
@@ -149,98 +153,112 @@ function BusinessList({ setView, email }) {
 
   return (
     <div className="min-h-screen bg-clickclick-dark text-white">
-      <header className="flex items-center justify-between px-6 py-4 border-b border-gray-800">
-        <h1 className="text-lg font-bold text-clickclick-orange">ClickClick Go · Admin</h1>
-        <div className="flex items-center gap-3">
-          <button
-            onClick={() => setView('edit-new')}
-            className="rounded-lg bg-clickclick-orange text-clickclick-dark font-semibold px-4 py-2 text-sm"
-          >
-            + Nuevo negocio
-          </button>
-          {email && <span className="text-gray-500 text-xs hidden sm:inline">{email}</span>}
-          <a
-            href="/cdn-cgi/access/logout"
-            className="text-gray-400 text-sm hover:text-white"
-          >
+      <header className="sticky top-0 z-20 border-b border-gray-800 bg-clickclick-dark/95 backdrop-blur">
+        <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:px-6">
+          <Brand />
+          <div className="flex-1" />
+          {email && <span className="hidden max-w-[200px] truncate text-xs text-gray-500 md:inline">{email}</span>}
+          <a href="/cdn-cgi/access/logout" className="rounded-lg px-2 py-2 text-sm text-gray-400 hover:text-white">
             Salir
           </a>
+          <button
+            onClick={() => setView('edit-new')}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-clickclick-orange px-3 py-2 text-sm font-semibold text-clickclick-dark hover:brightness-110 sm:px-4"
+          >
+            <Icon name="plus" size={16} />
+            <span>Nuevo<span className="hidden sm:inline"> negocio</span></span>
+          </button>
         </div>
       </header>
 
-      <div className="max-w-4xl mx-auto p-6">
-        <input
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Buscar por nombre o slug..."
-          className="w-full rounded-lg bg-gray-800 border border-gray-600 px-4 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-clickclick-orange"
-        />
+      <main className="mx-auto max-w-5xl px-4 py-6 sm:px-6">
+        <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <h1 className="text-xl font-bold">Negocios</h1>
+            <p className="text-sm text-gray-400">
+              {items === null ? 'Cargando...' : `${items.length} ${items.length === 1 ? 'perfil publicado' : 'perfiles publicados'}`}
+            </p>
+          </div>
+          <div className="relative w-full sm:w-72">
+            <Icon name="search" size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Buscar negocio..."
+              aria-label="Buscar negocios"
+              className={`${inputCls} pl-9 pr-8`}
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery('')} aria-label="Limpiar búsqueda" className="absolute right-2 top-1/2 -translate-y-1/2 px-1 text-lg leading-none text-gray-500 hover:text-white">×</button>
+            )}
+          </div>
+        </div>
 
-        {error && <p className="mt-4 text-red-400">{error}</p>}
-        {items === null && <p className="mt-6 text-gray-400">Cargando...</p>}
-        {items && filtered.length === 0 && (
-          <p className="mt-6 text-gray-400">
-            {query ? 'Sin resultados.' : 'Aún no hay negocios. Crea el primero con "+ Nuevo negocio".'}
-          </p>
+        {error && (
+          <div role="alert" className="mb-4 flex items-center justify-between gap-3 rounded-xl border border-red-900 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+            <span>{error}</span>
+            <button onClick={refresh} className="font-semibold underline">Reintentar</button>
+          </div>
         )}
 
-        <div className="mt-5 flex flex-col gap-3">
+        {items === null && !error && (
+          <div className="flex flex-col gap-3" aria-hidden="true">
+            {[0, 1, 2].map((i) => <div key={i} className="h-[88px] animate-pulse rounded-2xl bg-gray-900" />)}
+          </div>
+        )}
+
+        {items && items.length === 0 && (
+          <div className="flex flex-col items-center rounded-2xl border border-dashed border-gray-700 px-6 py-14 text-center">
+            <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-clickclick-orange/10 text-clickclick-orange"><Icon name="store" size={26} /></span>
+            <p className="font-semibold">Aún no hay negocios</p>
+            <p className="mt-1 max-w-xs text-sm text-gray-400">Crea el primer perfil y compártelo con un enlace o código QR.</p>
+            <button onClick={() => setView('edit-new')} className="mt-5 inline-flex items-center gap-1.5 rounded-lg bg-clickclick-orange px-4 py-2 text-sm font-semibold text-clickclick-dark">
+              <Icon name="plus" size={16} /> Crear negocio
+            </button>
+          </div>
+        )}
+        {items && items.length > 0 && filtered.length === 0 && (
+          <p className="rounded-2xl border border-gray-800 px-6 py-10 text-center text-sm text-gray-400">Sin resultados para «{query}».</p>
+        )}
+
+        <ul className="flex flex-col gap-3">
           {filtered.map((b) => (
-            <div
+            <li
               key={b.slug}
-              className="flex items-center gap-4 bg-gray-900 border border-gray-800 rounded-xl p-4"
+              className="flex flex-col gap-3 rounded-2xl border border-gray-800 bg-gray-900/60 p-4 transition hover:border-gray-700 sm:flex-row sm:items-center"
             >
-              <div className="w-12 h-12 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center overflow-hidden shrink-0">
-                {b.logo ? (
-                  <img src={b.logo} alt={b.name} className="w-full h-full object-cover" />
-                ) : (
-                  <span className="text-clickclick-orange font-bold">
-                    {(b.name || '?').slice(0, 2).toUpperCase()}
+              <button
+                type="button"
+                onClick={() => setView({ mode: 'edit', slug: b.slug })}
+                className="flex min-w-0 flex-1 items-center gap-4 text-left"
+              >
+                <Avatar logo={b.logo} name={b.name} size={48} />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-semibold">{b.name}</span>
+                  <span className="block truncate text-xs text-gray-500">
+                    /{b.slug}
+                    {b.category && <> · <span className="text-gray-400">{b.category}</span></>}
                   </span>
-                )}
-              </div>
-              <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{b.name}</div>
-                <div className="text-xs text-gray-500 truncate">/{b.slug} · {b.category || 'Sin categoría'}</div>
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <a
-                  href={`/${b.slug}`}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700"
-                >
-                  Ver
-                </a>
+                  {b.updatedAt && <span className="mt-0.5 block text-[11px] text-gray-600">Actualizado {timeAgo(b.updatedAt)}</span>}
+                </span>
+              </button>
+              <div className="flex items-center gap-1.5 border-t border-gray-800 pt-3 sm:border-0 sm:pt-0">
                 <button
                   onClick={() => setView({ mode: 'edit', slug: b.slug })}
-                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700"
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-clickclick-orange/10 px-3 py-2 text-xs font-semibold text-clickclick-orange hover:bg-clickclick-orange/20"
                 >
-                  Editar
+                  <Icon name="edit" size={14} /> Editar
                 </button>
-                <button
-                  onClick={() => openModal(b.slug, 'qr')}
-                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700"
-                >
-                  QR
-                </button>
-                <button
-                  onClick={() => openModal(b.slug, 'print')}
-                  className="px-3 py-1.5 rounded-lg bg-gray-800 hover:bg-gray-700"
-                >
-                  Cartel
-                </button>
-                <button
-                  onClick={() => onDelete(b.slug)}
-                  className="px-3 py-1.5 rounded-lg bg-red-900/60 hover:bg-red-800 text-red-200"
-                >
-                  Eliminar
-                </button>
+                <ListAction href={`/${b.slug}`} icon="external" label="Ver" />
+                <ListAction onClick={() => openModal(b.slug, 'qr')} icon="qr" label="QR" />
+                <ListAction onClick={() => openModal(b.slug, 'print')} icon="print" label="Cartel" />
+                <span className="flex-1 sm:hidden" />
+                <IconButton icon="trash" label={`Eliminar ${b.name}`} tone="danger" onClick={() => onDelete(b.slug)} />
               </div>
-            </div>
+            </li>
           ))}
-        </div>
-      </div>
+        </ul>
+      </main>
 
       {modal && (
         <ResourceModal
@@ -252,6 +270,55 @@ function BusinessList({ setView, email }) {
       )}
     </div>
   )
+}
+
+function ListAction({ href, onClick, icon, label }) {
+  const cls = 'inline-flex items-center gap-1.5 rounded-lg px-2.5 py-2 text-xs font-medium text-gray-300 hover:bg-gray-800 hover:text-white'
+  const content = <><Icon name={icon} size={14} />{label}</>
+  return href
+    ? <a href={href} target="_blank" rel="noreferrer" className={cls}>{content}</a>
+    : <button type="button" onClick={onClick} className={cls}>{content}</button>
+}
+
+function Brand() {
+  return (
+    <div className="flex items-center gap-2">
+      <div
+        role="img"
+        aria-label="ClyClick"
+        className="h-8 w-11 bg-clickclick-orange"
+        style={{ mask: 'url("/logo-clyclick.png") left center / contain no-repeat', WebkitMask: 'url("/logo-clyclick.png") left center / contain no-repeat' }}
+      />
+      <span className="rounded-md bg-gray-800 px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400">Admin</span>
+    </div>
+  )
+}
+
+function Avatar({ logo, name, size = 40 }) {
+  return (
+    <span
+      className="flex shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-700 bg-gray-800"
+      style={{ width: size, height: size }}
+    >
+      {logo ? (
+        <img src={logo} alt="" className="h-full w-full object-cover" />
+      ) : (
+        <span className="font-bold text-clickclick-orange" style={{ fontSize: size * 0.34 }}>
+          {(name || '?').split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase()}
+        </span>
+      )}
+    </span>
+  )
+}
+
+function timeAgo(timestamp) {
+  const seconds = Math.max(0, (Date.now() - timestamp) / 1000)
+  const units = [[31536000, 'año', 'años'], [2592000, 'mes', 'meses'], [86400, 'día', 'días'], [3600, 'hora', 'horas'], [60, 'minuto', 'minutos']]
+  for (const [size, one, many] of units) {
+    const value = Math.floor(seconds / size)
+    if (value >= 1) return `hace ${value} ${value === 1 ? one : many}`
+  }
+  return 'hace un momento'
 }
 
 // --- Modal de recursos (QR / Cartel) ---
@@ -305,6 +372,7 @@ function Editor({ isEdit, slug, onDone }) {
   const [baseline, setBaseline] = useState(EMPTY_BUSINESS)
   const [notice, setNotice] = useState('')
   const [preview, setPreview] = useState(false)
+  const [openSections, setOpenSections] = useState(() => new Set(['basic']))
   const draftKey = `clyclick:draft:${slug || 'new'}`
   const dirty = JSON.stringify(business) !== JSON.stringify(baseline)
 
@@ -368,15 +436,34 @@ function Editor({ isEdit, slug, onDone }) {
     setBusiness((prev) => ({ ...prev, ...p }))
   }
 
+  function toggleSection(id) {
+    setOpenSections((prev) => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  // Navegación rápida: abre la tarjeta y la desplaza a la vista.
+  function goToSection(id) {
+    setPreview(false)
+    setOpenSections((prev) => new Set(prev).add(id))
+    requestAnimationFrame(() => {
+      document.getElementById(`section-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
   async function onSave() {
     setError('')
     if (!business.name.trim()) {
       setError('El nombre es obligatorio')
+      goToSection('basic')
       return
     }
     const bankError = validateBankAccounts(business.bankAccounts)
     if (bankError) {
       setError(bankError)
+      goToSection('bank')
       return
     }
     setSaving(true)
@@ -393,47 +480,124 @@ function Editor({ isEdit, slug, onDone }) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-clickclick-dark text-white flex items-center justify-center">
-        Cargando...
+      <div className="flex min-h-screen items-center justify-center gap-3 bg-clickclick-dark text-gray-400">
+        <Spinner /> Cargando...
       </div>
     )
   }
 
+  const status = loadFailed
+    ? { color: 'bg-red-500', text: 'No se pudo cargar' }
+    : dirty
+      ? { color: 'bg-amber-400', text: 'Cambios sin publicar' }
+      : { color: 'bg-emerald-500', text: isEdit ? 'Publicado' : 'Sin cambios' }
+
   return (
-    <div className="min-h-screen bg-clickclick-dark text-white">
-      <header className="flex items-center justify-between gap-3 px-6 py-4 border-b border-gray-800 sticky top-0 bg-clickclick-dark z-20">
-        <button onClick={leaveEditor} disabled={saving} className="text-gray-400 hover:text-white text-sm">
-          ← Volver
-        </button>
-        <h1 className="min-w-0 break-words text-base sm:text-lg font-bold text-clickclick-orange">
-          {isEdit ? `Editar: ${business.name}` : 'Nuevo negocio'}
-        </h1>
-        <button
-          onClick={onSave}
-          disabled={saving || loadFailed}
-          className="rounded-lg bg-clickclick-orange text-clickclick-dark font-semibold px-5 py-2 text-sm disabled:opacity-50"
-        >
-          {saving ? 'Publicando...' : 'Publicar'}
-        </button>
+    <div className="min-h-screen bg-clickclick-dark pb-24 text-white lg:pb-0">
+      <header className="sticky top-0 z-30 border-b border-gray-800 bg-clickclick-dark/95 backdrop-blur">
+        <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:px-6">
+          <IconButton icon="arrow-left" label="Volver al listado" onClick={leaveEditor} disabled={saving} size={18} />
+          <span className="hidden sm:flex"><Avatar logo={business.logo} name={business.name} size={36} /></span>
+          <div className="min-w-0 flex-1">
+            <h1 className="truncate text-sm font-semibold sm:text-base">
+              {business.name || (isEdit ? slug : 'Nuevo negocio')}
+            </h1>
+            <p className="flex items-center gap-1.5 text-xs text-gray-400">
+              <span className={`h-2 w-2 shrink-0 rounded-full ${status.color}`} aria-hidden="true" />
+              <span className="truncate">{status.text}</span>
+              {isEdit && (
+                <a href={`/${slug}`} target="_blank" rel="noreferrer" className="hidden items-center gap-1 text-gray-500 hover:text-white sm:inline-flex">
+                  · /{slug} <Icon name="external" size={11} />
+                </a>
+              )}
+            </p>
+          </div>
+          <div className="hidden items-center gap-2 sm:flex">
+            {dirty && (
+              <button type="button" onClick={discardDraft} disabled={saving || loadFailed} className="px-2 text-xs text-gray-400 hover:text-white">
+                Descartar
+              </button>
+            )}
+            <button type="button" onClick={saveDraft} disabled={saving || loadFailed} className="rounded-lg border border-gray-700 px-3 py-2 text-sm text-gray-200 hover:border-gray-500 disabled:opacity-50">
+              Guardar borrador
+            </button>
+          </div>
+          <button
+            onClick={onSave}
+            disabled={saving || loadFailed}
+            className="inline-flex items-center gap-2 rounded-lg bg-clickclick-orange px-4 py-2 text-sm font-semibold text-clickclick-dark hover:brightness-110 disabled:opacity-50 sm:px-5"
+          >
+            {saving && <Spinner />}
+            {saving ? 'Publicando...' : 'Publicar'}
+          </button>
+        </div>
+        <nav aria-label="Secciones del formulario" className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 pb-3 sm:px-6 [scrollbar-width:none]">
+          {FORM_SECTIONS.map((section) => (
+            <button
+              key={section.id}
+              type="button"
+              onClick={() => goToSection(section.id)}
+              className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs transition ${
+                openSections.has(section.id)
+                  ? 'border-clickclick-orange/50 bg-clickclick-orange/10 text-clickclick-orange'
+                  : 'border-gray-800 text-gray-400 hover:border-gray-600 hover:text-white'
+              }`}
+            >
+              <Icon name={section.icon} size={13} />
+              {section.short}
+            </button>
+          ))}
+        </nav>
       </header>
 
-      <div className="max-w-6xl mx-auto px-6 pt-4 flex flex-wrap items-center gap-3 text-sm">
-        <span className="text-gray-400">{dirty ? 'Cambios sin publicar' : 'Sin cambios pendientes'}</span>
-        <button type="button" onClick={saveDraft} disabled={saving || loading || loadFailed} className="rounded-lg bg-gray-800 px-3 py-2">Guardar borrador</button>
-        <button type="button" onClick={discardDraft} disabled={saving || loadFailed} className="text-gray-400 underline">Descartar borrador</button>
-        <button type="button" onClick={() => setPreview(!preview)} aria-expanded={preview} className="lg:hidden rounded-lg bg-gray-800 px-3 py-2">{preview ? 'Volver a editar' : 'Vista previa'}</button>
-        {notice && <p role="status" className="w-full text-amber-300">{notice}</p>}
+      <div className="mx-auto max-w-7xl px-4 pt-4 sm:px-6">
+        {/* Acciones de borrador en móvil (en escritorio viven en la cabecera) */}
+        <div className="mb-3 flex items-center gap-3 sm:hidden">
+          <button type="button" onClick={saveDraft} disabled={saving || loadFailed} className="rounded-lg border border-gray-700 px-3 py-2 text-xs text-gray-200 disabled:opacity-50">
+            Guardar borrador
+          </button>
+          {dirty && (
+            <button type="button" onClick={discardDraft} disabled={saving || loadFailed} className="text-xs text-gray-400">Descartar cambios</button>
+          )}
+        </div>
+        {notice && (
+          <p role="status" className="mb-3 flex items-center gap-2 rounded-xl border border-amber-900/60 bg-amber-950/30 px-4 py-2.5 text-sm text-amber-200">
+            <Icon name="info" size={16} className="shrink-0" /> {notice}
+          </p>
+        )}
+        {error && (
+          <p role="alert" className="mb-3 flex items-center gap-2 rounded-xl border border-red-900 bg-red-950/40 px-4 py-2.5 text-sm text-red-300">
+            <Icon name="info" size={16} className="shrink-0" /> {error}
+          </p>
+        )}
       </div>
-      {error && <div className="max-w-6xl mx-auto px-6 pt-4"><p className="text-red-400">{error}</p></div>}
 
-      <div className="max-w-6xl mx-auto p-6 grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 pb-10 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className={preview ? 'hidden lg:block' : 'block'}>
-          <fieldset disabled={saving || loadFailed} className="min-w-0"><BusinessForm value={business} onChange={patch} isEdit={isEdit} /></fieldset>
+          <fieldset disabled={saving || loadFailed} className="min-w-0">
+            <BusinessForm value={business} onChange={patch} isEdit={isEdit} openSections={openSections} onToggleSection={toggleSection} />
+          </fieldset>
         </div>
-        <div className={`${preview ? 'flex' : 'hidden'} lg:flex lg:sticky lg:top-24 self-start justify-center`}>
+        <aside className={`${preview ? 'flex' : 'hidden'} flex-col items-center gap-3 self-start lg:sticky lg:top-32 lg:flex`}>
           <PhoneMockup business={business} />
-        </div>
+          {isEdit && (
+            <a href={`/${slug}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 text-xs text-gray-400 hover:text-white">
+              Abrir página publicada <Icon name="external" size={12} />
+            </a>
+          )}
+        </aside>
       </div>
+
+      {/* Alternar editor / vista previa en pantallas pequeñas */}
+      <button
+        type="button"
+        onClick={() => { setPreview(!preview); window.scrollTo({ top: 0 }) }}
+        aria-pressed={preview}
+        className="fixed bottom-5 left-1/2 z-30 inline-flex -translate-x-1/2 items-center gap-2 rounded-full border border-gray-700 bg-gray-900/95 px-5 py-3 text-sm font-semibold text-white shadow-2xl backdrop-blur lg:hidden"
+      >
+        <Icon name={preview ? 'edit' : 'eye'} size={16} />
+        {preview ? 'Seguir editando' : 'Vista previa'}
+      </button>
     </div>
   )
 }

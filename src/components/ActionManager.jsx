@@ -4,6 +4,7 @@ import { uploadMedia } from '../utils/api.js'
 import { Icon } from './Icons.jsx'
 import ButtonColorFields from './ButtonColorFields.jsx'
 import AnimationSelector from './AnimationSelector.jsx'
+import { FileButton, IconButton, Toggle } from './admin/ui.jsx'
 import { BANK_SECTION_ID, getProfileSections } from '../utils/banking.js'
 
 export default function ActionManager({ business, onChange }) {
@@ -91,19 +92,16 @@ export default function ActionManager({ business, onChange }) {
               onDrop={() => drop(item.type)}
               className={`overflow-hidden rounded-xl border bg-gray-900/70 ${dragged === item.type ? 'border-clickclick-orange opacity-60' : 'border-gray-700'}`}
             >
-              <div className="flex items-center gap-3 p-3">
-                <span className="cursor-grab text-gray-500" title="Arrastrar">⋮⋮</span>
+              <div className="flex items-center gap-2 p-3">
+                <span className="cursor-grab text-gray-600 hover:text-gray-400" title="Arrastrar para ordenar"><Icon name="grip" size={16} /></span>
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-800 text-clickclick-orange"><Icon name={definition.icon} size={19} /></span>
                 <button type="button" onClick={() => setOpen(open === item.type ? '' : item.type)} className="min-w-0 flex-1 text-left">
                   <span className="block truncate text-sm font-medium">{item.label || definition.label}</span>
                   <span className={`text-[11px] ${configured ? 'text-emerald-400' : 'text-gray-500'}`}>{configured ? 'Configurado' : 'Falta configurar destino'}</span>
                 </button>
-                <button type="button" onClick={() => move(item.type, -1)} disabled={index === 0} className="px-1 text-gray-400 disabled:opacity-20" aria-label="Subir">↑</button>
-                <button type="button" onClick={() => move(item.type, 1)} disabled={index === settings.length - 1} className="px-1 text-gray-400 disabled:opacity-20" aria-label="Bajar">↓</button>
-                <label className="relative inline-flex cursor-pointer items-center">
-                  <input type="checkbox" checked={item.enabled !== false} onChange={(event) => patch(item.type, { enabled: event.target.checked })} className="peer sr-only" />
-                  <span className="h-6 w-11 rounded-full bg-gray-700 after:absolute after:left-1 after:top-1 after:h-4 after:w-4 after:rounded-full after:bg-white after:transition peer-checked:bg-clickclick-orange peer-checked:after:translate-x-5" />
-                </label>
+                <IconButton icon="chevron-up" label="Subir" onClick={() => move(item.type, -1)} disabled={index === 0} />
+                <IconButton icon="chevron-down" label="Bajar" onClick={() => move(item.type, 1)} disabled={index === settings.length - 1} />
+                <Toggle checked={item.enabled !== false} onChange={(enabled) => patch(item.type, { enabled })} label={`Mostrar ${item.label || definition.label}`} />
               </div>
 
               {open === item.type && (
@@ -123,11 +121,8 @@ export default function ActionManager({ business, onChange }) {
                   </label>
                   <div className="mt-3 flex items-center gap-3">
                     {item.thumbnail && <img src={item.thumbnail} alt="Miniatura" className="h-14 w-14 rounded-lg object-cover" />}
-                    <label className="cursor-pointer rounded-lg border border-dashed border-gray-600 px-3 py-2 text-xs text-gray-300">
-                      {uploading === item.type ? 'Subiendo...' : item.thumbnail ? 'Cambiar miniatura' : 'Agregar miniatura'}
-                      <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" onChange={(event) => uploadThumbnail(item.type, event)} className="hidden" />
-                    </label>
-                    {item.thumbnail && <button type="button" onClick={() => patch(item.type, { thumbnail: '' })} className="text-xs text-gray-400 underline">Quitar</button>}
+                    <FileButton label={item.thumbnail ? 'Cambiar miniatura' : 'Agregar miniatura'} busy={uploading === item.type} accept="image/png,image/jpeg,image/webp,image/gif" onFile={(event) => uploadThumbnail(item.type, event)} />
+                    {item.thumbnail && <button type="button" onClick={() => patch(item.type, { thumbnail: '' })} className="text-xs text-gray-400 hover:text-white">Quitar</button>}
                   </div>
                 </div>
               )}
@@ -137,9 +132,9 @@ export default function ActionManager({ business, onChange }) {
       </div>
 
       <div className="rounded-xl border border-gray-700 p-4">
-        <div className="mb-3 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-clickclick-orange">Secciones</p><button type="button" onClick={addSection} className="rounded-lg bg-gray-800 px-3 py-1.5 text-xs">+ Agregar</button></div>
+        <div className="mb-3 flex items-center justify-between"><p className="text-xs font-semibold uppercase tracking-wide text-clickclick-orange">Secciones</p><button type="button" onClick={addSection} className="inline-flex items-center gap-1 rounded-lg bg-gray-800 px-3 py-1.5 text-xs hover:bg-gray-700"><Icon name="plus" size={12} />Agregar</button></div>
         {sections.length === 0 && <p className="text-xs text-gray-500">Puedes agrupar acciones bajo encabezados.</p>}
-        <div className="space-y-2">{sections.map((section) => <div key={section.id} className="flex items-center gap-2"><input aria-label="Nombre de sección" value={section.title} onChange={(event) => patchSection(section.id, event.target.value)} className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm" />{section.id === BANK_SECTION_ID ? <span className="text-xs text-gray-500">Bancaria</span> : <button type="button" onClick={() => removeSection(section.id)} className="px-2 text-xs text-red-400">Eliminar</button>}</div>)}</div>
+        <div className="space-y-2">{sections.map((section) => <div key={section.id} className="flex items-center gap-2"><input aria-label="Nombre de sección" value={section.title} onChange={(event) => patchSection(section.id, event.target.value)} className="min-w-0 flex-1 rounded-lg border border-gray-700 bg-gray-800 px-3 py-2 text-sm" />{section.id === BANK_SECTION_ID ? <span className="text-xs text-gray-500">Bancaria</span> : <IconButton icon="trash" label="Eliminar sección" tone="danger" onClick={() => removeSection(section.id)} />}</div>)}</div>
       </div>
     </div>
   )

@@ -4,6 +4,8 @@ import { readPaymentQr } from '../utils/readPaymentQr.js'
 import BankLogo from './BankLogo.jsx'
 import ButtonColorFields from './ButtonColorFields.jsx'
 import AnimationSelector from './AnimationSelector.jsx'
+import { FileButton, IconButton } from './admin/ui.jsx'
+import { Icon } from './Icons.jsx'
 
 const inputClass = 'w-full rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white'
 
@@ -49,7 +51,7 @@ export default function BankAccountManager({ business, onChange }) {
             {BANKS.map((bank) => <option key={bank.id} value={bank.id}>{bank.name}</option>)}
           </select>
         </label>
-        <button type="button" disabled={accounts.length >= MAX_BANK_ACCOUNTS} onClick={addAccount} className="rounded-lg bg-clickclick-orange px-4 py-2 font-semibold text-clickclick-dark disabled:opacity-40">+ Agregar cuenta</button>
+        <button type="button" disabled={accounts.length >= MAX_BANK_ACCOUNTS} onClick={addAccount} className="inline-flex items-center gap-1.5 rounded-lg bg-clickclick-orange px-4 py-2 text-xs font-semibold text-clickclick-dark hover:brightness-110 disabled:opacity-40"><Icon name="plus" size={14} />Agregar cuenta</button>
       </div>
       {accounts.length >= MAX_BANK_ACCOUNTS && <p className="text-xs text-gray-400">Límite de {MAX_BANK_ACCOUNTS} cuentas alcanzado.</p>}
       {accounts.map((account, index) => (
@@ -100,16 +102,16 @@ function BankAccountEditor({ account, business, sections, index, count, onChange
 
   if (!bank) return null
   return (
-    <fieldset className="min-w-0 rounded-xl border border-gray-700 bg-gray-900/70 p-4">
+    <fieldset className="min-w-0 rounded-xl border border-gray-700 bg-gray-900/70 p-4 pt-2">
       <legend className="px-2 text-sm font-semibold">{bank.name} · Cuenta {index + 1}</legend>
-      <div className="mb-4 flex items-center gap-3">
+      <div className="mb-4 flex items-center gap-2">
         <BankLogo bank={bank.id} />
         <label className="flex flex-1 items-center gap-2 text-xs text-gray-300">
           <input type="checkbox" checked={account.enabled !== false} onChange={(event) => onChange({ enabled: event.target.checked })} /> Mostrar cuenta
         </label>
-        <button type="button" onClick={() => onMove(-1)} disabled={index === 0} aria-label="Subir cuenta" className="p-1 disabled:opacity-25">↑</button>
-        <button type="button" onClick={() => onMove(1)} disabled={index === count - 1} aria-label="Bajar cuenta" className="p-1 disabled:opacity-25">↓</button>
-        <button type="button" onClick={onRemove} className="text-xs text-red-400">Eliminar cuenta</button>
+        <IconButton icon="chevron-up" label="Subir cuenta" onClick={() => onMove(-1)} disabled={index === 0} />
+        <IconButton icon="chevron-down" label="Bajar cuenta" onClick={() => onMove(1)} disabled={index === count - 1} />
+        <IconButton icon="trash" label="Eliminar cuenta" tone="danger" onClick={onRemove} />
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="flex flex-col gap-1 text-xs text-gray-400 sm:col-span-2">Título del botón
@@ -137,9 +139,7 @@ function BankAccountEditor({ account, business, sections, index, count, onChange
             <input type="url" value={account.url || ''} disabled={reading} placeholder="https://..." maxLength={4096} onChange={(event) => { onChange({ url: event.target.value }); setMessage(''); setError('') }} className={inputClass} />
           </label>
           {account.url && !paymentUrl(account.url) && <p className="text-xs text-amber-300">Ingresa un enlace completo que empiece con https:// o http://.</p>}
-          <label className="flex flex-col gap-2 text-xs text-gray-300">{reading ? 'Leyendo QR...' : 'Extraer enlace desde QR'}
-            <input type="file" accept="image/png,image/jpeg,image/webp,image/gif" disabled={reading} onChange={readQr} className="block w-full min-w-0 text-xs file:mr-2 file:rounded-lg file:border-0 file:bg-gray-700 file:px-3 file:py-2 file:text-white" />
-          </label>
+          <FileButton label="Extraer enlace desde QR" busyLabel="Leyendo QR..." busy={reading} accept="image/png,image/jpeg,image/webp,image/gif" onFile={readQr} />
           <p className="text-xs text-gray-500">La imagen se procesa aquí y no se guarda. Puedes pegar el enlace directamente.</p>
           {account.url && <button type="button" disabled={reading} onClick={() => { onChange({ url: '' }); setMessage(''); setError('') }} className="text-xs text-gray-400 underline">Quitar enlace y mostrar datos de la cuenta</button>}
           {message && <p role="status" className="text-xs text-emerald-400">{message}</p>}
