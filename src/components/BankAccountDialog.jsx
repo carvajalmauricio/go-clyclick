@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { BANKS, bankAccountDetails } from '../utils/banking.js'
+import { copyText } from '../utils/clipboard.js'
 import BankLogo from './BankLogo.jsx'
 
 export default function BankAccountDialog({ account, onClose }) {
@@ -18,12 +19,10 @@ export default function BankAccountDialog({ account, onClose }) {
   }, [])
 
   async function copy(text) {
-    try {
-      await navigator.clipboard.writeText(text)
-      setStatus('Datos copiados.')
-    } catch {
-      setStatus('No se pudo copiar. Mantén pulsados los datos para copiarlos manualmente.')
-    }
+    const ok = await copyText(text)
+    setStatus(ok
+      ? 'Datos copiados.'
+      : 'No se pudo copiar. Mantén pulsados los datos para copiarlos manualmente.')
   }
 
   return createPortal(

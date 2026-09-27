@@ -137,6 +137,46 @@ export function ensureHttp(url) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`
 }
 
+// Extrae una dirección legible desde un enlace de Google Maps para poder
+// copiarla con un toque. Soporta las formas más comunes:
+//   .../maps/place/Direccion+Aqui/...  -> "Direccion Aqui"
+//   ...?q=Direccion+Aqui  o  ?query=... -> "Direccion Aqui"
+// Devuelve '' si no se puede derivar una dirección (p. ej. enlaces cortos
+// tipo maps.app.goo.gl, que no exponen el texto). Nunca lanza.
+export function addressFromMapsUrl(mapsUrl) {
+  const value = String(mapsUrl || '').trim()
+  if (!value) return ''
+  let url
+  try {
+    url = new URL(/^https?:\/\//i.test(value) ? value : `https://${value}`)
+  } catch {
+    return ''
+  }
+  const decode = (raw) => {
+    try {
+      return decodeURIComponent(String(raw).replace(/\+/g, ' ')).trim()
+    } catch {
+      return ''
+    }
+  }
+  // 1) Parámetros de consulta habituales.
+  for (const param of ['q', 'query', 'destination']) {
+    const found = url.searchParams.get(param)
+    if (found) {
+      const text = decode(found)
+      // Descarta coordenadas puras "lat,lng".
+      if (text && !/^-?\d+(\.\d+)?,-?\d+(\.\d+)?$/.test(text)) return text
+    }
+  }
+  // 2) Segmento /place/<direccion>/ del path.
+  const match = url.pathname.match(/\/place\/([^/]+)/i)
+  if (match) {
+    const text = decode(match[1])
+    if (text && !/^@?-?\d+(\.\d+)?,-?\d+(\.\d+)?/.test(text)) return text
+  }
+  return ''
+}
+
 // Catálogo compartido de redes sociales. El orden define el orden por defecto
 // en el editor y en el perfil. Cada entrada expone: key, label, icon (case en
 // Icons.jsx), buildUrl (a partir del valor crudo) y placeholder para el editor.

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import { generatePngDataUrl, downloadDataUrl, profileUrl } from '../utils/qrGenerator.js'
+import { copyText, shareLink } from '../utils/clipboard.js'
 
 export default function ShareMenu({ business, theme, compact = false }) {
   const [open, setOpen] = useState(false)
@@ -21,18 +22,12 @@ export default function ShareMenu({ business, theme, compact = false }) {
   }, [open, url, business.logo, retry])
 
   async function share() {
-    if (navigator.share) {
-      try {
-        await navigator.share({ title: business.name, text: business.description || business.name, url })
-        return
-      } catch (error) {
-        if (error?.name === 'AbortError') return
-      }
-    }
+    await shareLink({ title: business.name, text: business.description || business.name, url })
   }
 
   async function copy() {
-    await navigator.clipboard.writeText(url)
+    const ok = await copyText(url)
+    if (!ok) return
     setCopied(true)
     window.setTimeout(() => setCopied(false), 1800)
   }

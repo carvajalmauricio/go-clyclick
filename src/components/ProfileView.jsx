@@ -10,6 +10,9 @@ import { getButtonColors } from '../utils/buttonColors.js'
 import BankLogo from './BankLogo.jsx'
 import BankAccountDialog from './BankAccountDialog.jsx'
 import { animationClass, innerAnimationClass } from '../utils/animations.js'
+import { addressFromMapsUrl } from '../utils/links.js'
+import { shareLink } from '../utils/clipboard.js'
+import CopyButton from './CopyButton.jsx'
 import HeroCarousel from './HeroCarousel.jsx'
 import { buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
 import { getFont, fontStylesheetUrl } from '../utils/fonts.js'
@@ -167,6 +170,9 @@ export default function ProfileView({ business: rawBusiness, compact = false }) 
           })}
         </div>
 
+        {/* Copiar con un toque (#12): teléfono y dirección cuando existen */}
+        <ContactCopyRow business={business} theme={theme} />
+
         {/* Redes sociales (abajo, tras los botones de acción) */}
         {socialPosition === 'bottom' && socialsRow}
 
@@ -178,6 +184,44 @@ export default function ProfileView({ business: rawBusiness, compact = false }) 
           </div>
         </footer>
       </div>
+    </div>
+  )
+}
+
+// Fila de "copiar con un toque" (#12) para valores concretos: teléfono y
+// dirección. La dirección se deriva del enlace de Google Maps del negocio.
+// Solo se muestra si hay al menos un valor copiable. Etiquetas en español.
+function ContactCopyRow({ business, theme }) {
+  const phone = String(business.phone || '').trim()
+  const address = addressFromMapsUrl(business.mapsUrl)
+  if (!phone && !address) return null
+  const chipStyle = {
+    background: `color-mix(in srgb, ${theme.card} 82%, transparent)`,
+    color: theme.text,
+    border: `1px solid ${theme.border}`,
+  }
+  return (
+    <div className="mt-5 flex w-full flex-wrap justify-center gap-2">
+      {phone && (
+        <CopyButton
+          value={phone}
+          label={phone}
+          ariaLabel={`Copiar teléfono ${phone}`}
+          iconSize={15}
+          className="max-w-full break-all rounded-full px-3.5 py-2 text-xs font-semibold backdrop-blur-md hover:scale-[1.03]"
+          style={chipStyle}
+        />
+      )}
+      {address && (
+        <CopyButton
+          value={address}
+          label={address}
+          ariaLabel={`Copiar dirección ${address}`}
+          iconSize={15}
+          className="max-w-full break-words rounded-full px-3.5 py-2 text-xs font-semibold backdrop-blur-md hover:scale-[1.03]"
+          style={chipStyle}
+        />
+      )}
     </div>
   )
 }
@@ -210,6 +254,35 @@ function ActionGroup({ actions, business, theme, lang = 'es' }) {
         )
       )}
     </div>
+  )
+}
+
+// Botón pequeño para compartir/copiar un enlace concreto de la tarjeta.
+// Usa la Web Share API con respaldo a copiar la URL, y muestra 'Copiado' de
+// forma transitoria (feedback seguro para prefers-reduced-motion).
+function ShareActionButton({ url, label, theme }) {
+  const [copied, setCopied] = useState(false)
+  async function onShare(event) {
+    // Evita disparar el enlace/botón contenedor de la tarjeta.
+    event.preventDefault()
+    event.stopPropagation()
+    const { copied: didCopy } = await shareLink({ title: label, url })
+    if (didCopy) {
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1600)
+    }
+  }
+  return (
+    <button
+      type="button"
+      onClick={onShare}
+      aria-label={copied ? 'Enlace copiado' : `Compartir ${label || 'enlace'}`}
+      title={copied ? 'Copiado' : 'Compartir'}
+      className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full backdrop-blur-md motion-safe:transition hover:scale-105"
+      style={{ background: `color-mix(in srgb, ${theme.card} 82%, transparent)`, color: theme.text, border: `1px solid ${theme.border}` }}
+    >
+      <Icon name={copied ? 'copy' : 'share'} size={15} />
+    </button>
   )
 }
 
@@ -279,8 +352,13 @@ function ActionCard({ action, business, theme, lang = 'es' }) {
   const className = `${layoutClass} ${widthClass} font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
   const ariaLabel = needsAriaLabel ? action.label : undefined
+  // Compartir por enlace (#12): solo para enlaces reales navegables (no #contact,
+  // no acciones que abren el diálogo de cuenta) y en layouts que no sean 'icon'
+  // (que debe mantenerse compacto). Se posiciona en la esquina de la tarjeta.
+  const isRealLink = Boolean(action.url) && action.url !== '#contact' && !action.isContact
+  const canShare = isRealLink && layout !== 'icon'
   return (
-    <div className={`${layout === 'icon' ? 'inline-flex' : 'w-full'} ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
+    <div className={`relative ${layout === 'icon' ? 'inline-flex' : 'w-full'} ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
       {action.bankAccount && !action.url ? (
         <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : action.isContact ? (
@@ -288,6 +366,7 @@ function ActionCard({ action, business, theme, lang = 'es' }) {
       ) : (
         <a href={action.url} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</a>
       )}
+      {canShare && <ShareActionButton url={action.url} label={action.label} theme={theme} />}
       {showAccount && <BankAccountDialog account={action.bankAccount} onClose={() => setShowAccount(false)} />}
     </div>
   )
