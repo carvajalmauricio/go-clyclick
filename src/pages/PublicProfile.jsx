@@ -3,12 +3,37 @@ import { useParams } from 'react-router-dom'
 import ProfileView from '../components/ProfileView.jsx'
 import NotFound from './NotFound.jsx'
 
+// Lee el negocio incrustado en el HTML (window.__BUSINESS__) solo si su slug
+// coincide con la ruta actual. Así una navegación posterior dentro de la SPA
+// hacia otro slug no reutiliza por error el dato del primer perfil.
+function readInlinedBusiness(slug) {
+  if (typeof window === 'undefined') return null
+  const inlined = window.__BUSINESS__
+  if (inlined && typeof inlined === 'object' && inlined.slug === slug) return inlined
+  return null
+}
+
 export default function PublicProfile() {
   const { slug } = useParams()
-  const [state, setState] = useState({ status: 'loading', business: null })
+  // Estado inicial perezoso: si el perfil ya viene incrustado en el HTML para
+  // este slug, pintamos al instante sin skeleton ni fetch. En Vite dev o en
+  // navegación SPA (sin dato incrustado) usamos la ruta de fetch habitual.
+  const [state, setState] = useState(() => {
+    const inlined = readInlinedBusiness(slug)
+    return inlined ? { status: 'ready', business: inlined } : { status: 'loading', business: null }
+  })
 
   useEffect(() => {
     let active = true
+    const inlined = readInlinedBusiness(slug)
+    if (inlined) {
+      // Pintado instantáneo desde el dato incrustado; no volvemos a pedirlo.
+      setState({ status: 'ready', business: inlined })
+      return () => {
+        active = false
+      }
+    }
+
     setState({ status: 'loading', business: null })
 
     fetch(`/api/business/${encodeURIComponent(slug)}`)
