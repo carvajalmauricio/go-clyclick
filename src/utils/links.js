@@ -2,6 +2,31 @@
 // de los datos crudos del negocio.
 import { buildBankActions } from './banking.js'
 import { normalizeAnimation } from './animations.js'
+import { normalizeLayout } from './buttonStyles.js'
+
+// Iconos disponibles para los enlaces personalizados. Todos reutilizan cases
+// existentes en src/components/Icons.jsx (no se inventan SVG nuevos).
+export const LINK_ICONS = [
+  { value: 'link', label: 'Enlace' },
+  { value: 'globe', label: 'Sitio web' },
+  { value: 'whatsapp', label: 'WhatsApp' },
+  { value: 'star', label: 'Estrella' },
+  { value: 'maps', label: 'Ubicación' },
+  { value: 'map', label: 'Mapa' },
+  { value: 'menu', label: 'Menú' },
+  { value: 'contact', label: 'Contacto' },
+  { value: 'instagram', label: 'Instagram' },
+  { value: 'tiktok', label: 'TikTok' },
+  { value: 'facebook', label: 'Facebook' },
+  { value: 'linkedin', label: 'LinkedIn' },
+  { value: 'bank', label: 'Banco' },
+  { value: 'share', label: 'Compartir' },
+]
+
+// Normaliza el nombre del icono de un enlace; cadena vacía si no es válido.
+export function normalizeLinkIcon(value) {
+  return LINK_ICONS.some((option) => option.value === value) ? value : ''
+}
 
 // Normaliza un número para WhatsApp (solo dígitos, con código de país).
 export function whatsappUrl(number, message) {
@@ -106,7 +131,31 @@ export function buildActions(business) {
         colors: setting.colors,
       }
     })
-  return [...actions, ...buildBankActions(b)]
+  return [...actions, ...buildCustomLinks(b), ...buildBankActions(b)]
+}
+
+// Convierte los enlaces personalizados del negocio en el mismo formato de
+// acción que buildActions, para que compartan el renderizado y el agrupado
+// por secciones del perfil. Solo se incluyen los habilitados con URL válida.
+export function buildCustomLinks(business) {
+  const links = Array.isArray(business?.links) ? business.links : []
+  return links
+    .filter((link) => link && link.enabled !== false)
+    .map((link) => ({ ...link, url: ensureHttp(String(link.url || '').trim()) }))
+    .filter((link) => link.url)
+    .sort((a, b) => (a.order ?? 0) - (b.order ?? 0))
+    .map((link) => ({
+      key: `link-${link.id}`,
+      label: link.title || 'Enlace',
+      icon: normalizeLinkIcon(link.icon) || 'link',
+      url: link.url,
+      thumbnail: link.thumbnail || '',
+      layout: normalizeLayout(link.layout),
+      sectionId: link.sectionId || '',
+      animation: normalizeAnimation(link.animation),
+      colors: link.colors,
+      custom: true,
+    }))
 }
 
 // Redes sociales activas

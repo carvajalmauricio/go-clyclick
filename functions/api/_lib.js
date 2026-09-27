@@ -6,7 +6,8 @@ import { BANK_SECTION_ID, getProfileSections, normalizeBankAccounts, validateBan
 import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
-import { normalizeButtonStyle } from '../../src/utils/buttonStyles.js'
+import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonStyles.js'
+import { LINK_ICONS, normalizeLinkIcon } from '../../src/utils/links.js'
 import { BACKGROUND_PATTERNS } from '../../src/utils/themes.js'
 
 export const KEY_PREFIX = 'business:'
@@ -247,12 +248,36 @@ export function normalizeBusiness(payload) {
           label: String(item.label || '').trim().slice(0, 80),
           enabled: item.enabled !== false,
           order: Number.isFinite(Number(item.order)) ? Number(item.order) : order,
-          layout: item.layout === 'featured' ? 'featured' : 'classic',
+          layout: normalizeLayout(item.layout),
           thumbnail: String(item.thumbnail || '').trim(),
           sectionId: String(item.sectionId || '').trim().slice(0, 80),
           animation: normalizeAnimation(item.animation),
           colors: normalizeButtonColors(item.colors),
         }))
+    : []
+
+  // Enlaces personalizados ilimitados (más allá de los 7 tipos fijos).
+  // Se descartan las entradas sin título y sin URL. Se limita a MAX_LINKS.
+  const MAX_LINKS = 50
+  const links = Array.isArray(payload.links)
+    ? payload.links
+        .filter((item) => item && typeof item === 'object')
+        .map((item) => ({
+          id: String(item.id || `link-${Math.random().toString(36).slice(2, 10)}`).trim().slice(0, 80),
+          title: String(item.title || '').trim().slice(0, 80),
+          url: String(item.url || '').trim().slice(0, 2048),
+          icon: normalizeLinkIcon(item.icon),
+          thumbnail: String(item.thumbnail || '').trim(),
+          enabled: item.enabled !== false,
+          order: Number.isFinite(Number(item.order)) ? Number(item.order) : 0,
+          layout: normalizeLayout(item.layout),
+          sectionId: String(item.sectionId || '').trim().slice(0, 80),
+          animation: normalizeAnimation(item.animation),
+          colors: normalizeButtonColors(item.colors),
+        }))
+        .filter((item) => item.title || item.url)
+        .slice(0, MAX_LINKS)
+        .map((item, order) => ({ ...item, order }))
     : []
 
   const sections = getProfileSections({ sections: Array.isArray(payload.sections)
@@ -320,6 +345,7 @@ export function normalizeBusiness(payload) {
       linkedin: String(payload.social?.linkedin || '').trim(),
     },
     actionSettings,
+    links,
     bankAccounts: normalizeBankAccounts(payload.bankAccounts, sections),
     sections,
     updatedAt: Date.now(),

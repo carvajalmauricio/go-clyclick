@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ThemeSelector from './ThemeSelector.jsx'
 import ActionManager from './ActionManager.jsx'
+import CustomLinksManager from './CustomLinksManager.jsx'
 import BankAccountManager from './BankAccountManager.jsx'
 import HeroSlidesManager from './HeroSlidesManager.jsx'
 import { uploadLogo } from '../utils/api.js'
@@ -170,6 +171,8 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
         </div>
         <SubHeading>Orden y presentación</SubHeading>
         <ActionManager business={b} onChange={onChange} />
+        <SubHeading>Enlaces personalizados</SubHeading>
+        <CustomLinksManager business={b} onChange={onChange} />
       </SectionCard>
 
       <SectionCard {...card('bank')}>
@@ -233,6 +236,7 @@ const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`
 function getSummaries(b) {
   const slides = b.heroSlides?.items?.length || 0
   const enabledActions = getActionSettings(b).filter((item) => item.enabled !== false)
+  const customLinks = (Array.isArray(b.links) ? b.links : []).filter((link) => link && link.enabled !== false && (link.title || link.url)).length
   const destinations = [b.whatsapp, b.googleReviewUrl, b.mapsUrl, b.wazeUrl, b.menuUrl].filter(Boolean).length
   const accounts = b.bankAccounts?.length || 0
   const socials = Object.values(b.social || {}).filter(Boolean).length
@@ -243,7 +247,7 @@ function getSummaries(b) {
     slides: b.heroSlides?.enabled && slides
       ? `Activo · ${plural(slides + 1, 'slide', 'slides')} · cada ${b.heroSlides.interval || 3} s`
       : 'Desactivado',
-    actions: `${plural(destinations, 'destino configurado', 'destinos configurados')} · ${plural(enabledActions.length, 'botón activo', 'botones activos')}`,
+    actions: `${plural(destinations, 'destino configurado', 'destinos configurados')} · ${plural(enabledActions.length, 'botón activo', 'botones activos')}${customLinks ? ` · ${plural(customLinks, 'enlace personalizado', 'enlaces personalizados')}` : ''}`,
     bank: accounts ? plural(accounts, 'cuenta', 'cuentas') : 'Sin cuentas',
     contact: `${plural(contact, 'dato de contacto', 'datos de contacto')} · ${plural(socials, 'red social', 'redes sociales')}`,
     design: `Tema ${themeName}`,

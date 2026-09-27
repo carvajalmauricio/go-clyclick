@@ -84,11 +84,31 @@ export default function ProfileView({ business, compact = false }) {
 
 function ActionGroup({ actions, business, theme }) {
   if (!actions.length) return null
+  // Agrupa acciones consecutivas con layout 'grid' dentro de una cuadrícula de
+  // 2 columnas; el resto (classic/featured/icon) mantiene el flujo apilado.
+  const chunks = []
+  for (const action of actions) {
+    const isGrid = action.layout === 'grid'
+    const last = chunks[chunks.length - 1]
+    if (isGrid && last?.grid) {
+      last.items.push(action)
+    } else {
+      chunks.push({ grid: isGrid, items: [action] })
+    }
+  }
   return (
     <div className="flex w-full flex-col gap-3">
-      {actions.map((action) => (
-        <ActionCard key={action.key} action={action} business={business} theme={theme} />
-      ))}
+      {chunks.map((chunk, index) =>
+        chunk.grid ? (
+          <div key={`grid-${index}`} className="grid grid-cols-2 gap-3">
+            {chunk.items.map((action) => (
+              <ActionCard key={action.key} action={action} business={business} theme={theme} />
+            ))}
+          </div>
+        ) : (
+          <ActionCard key={chunk.items[0].key} action={chunk.items[0]} business={business} theme={theme} />
+        )
+      )}
     </div>
   )
 }
@@ -106,7 +126,9 @@ function ActionCard({ action, business, theme }) {
   const innerAnimation = innerAnimationClass(action.animation)
   const cardStyle = { background, color, border, borderRadius: radius, boxShadow: shadow }
 
-  const content = action.layout === 'featured' ? (
+  const layout = action.layout || 'classic'
+
+  const content = layout === 'featured' ? (
     <>
       {action.thumbnail ? (
         <img src={action.thumbnail} alt="" className="aspect-video w-full object-cover" />
@@ -121,6 +143,19 @@ function ActionCard({ action, business, theme }) {
         <span aria-hidden="true">›</span>
       </div>
     </>
+  ) : layout === 'grid' ? (
+    <>
+      {action.thumbnail ? (
+        <img src={action.thumbnail} alt="" className="aspect-square w-full object-cover" />
+      ) : (
+        <div className="flex aspect-square w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
+          <Icon name={action.icon} size={40} />
+        </div>
+      )}
+      <span className="block px-3 py-2.5 text-center text-sm font-semibold">{action.label}</span>
+    </>
+  ) : layout === 'icon' ? (
+    <Icon name={action.icon} size={24} />
   ) : (
     <>
       {action.bank ? <BankLogo bank={action.bank} /> : action.thumbnail ? <img src={action.thumbnail} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
@@ -132,16 +167,26 @@ function ActionCard({ action, business, theme }) {
     </>
   )
 
-  const className = `${action.layout === 'featured' ? 'block overflow-hidden' : 'flex min-h-14 items-center gap-3 px-4 py-3'} w-full font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
+  const layoutClass = layout === 'featured'
+    ? 'block overflow-hidden'
+    : layout === 'grid'
+      ? 'block overflow-hidden'
+      : layout === 'icon'
+        ? 'mx-auto flex h-14 w-14 items-center justify-center'
+        : 'flex min-h-14 items-center gap-3 px-4 py-3'
+  const needsAriaLabel = layout === 'icon'
+  const widthClass = layout === 'icon' ? '' : 'w-full'
+  const className = `${layoutClass} ${widthClass} font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
+  const ariaLabel = needsAriaLabel ? action.label : undefined
   return (
-    <div className={`w-full ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
+    <div className={`${layout === 'icon' ? 'inline-flex' : 'w-full'} ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
       {action.bankAccount && !action.url ? (
-        <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" className={className} style={cardStyle}>{content}</button>
+        <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : action.isContact ? (
-        <button type="button" onClick={() => downloadVCard(business)} className={className} style={cardStyle}>{content}</button>
+        <button type="button" onClick={() => downloadVCard(business)} aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : (
-        <a href={action.url} target="_blank" rel="noopener noreferrer" className={className} style={cardStyle}>{content}</a>
+        <a href={action.url} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</a>
       )}
       {showAccount && <BankAccountDialog account={action.bankAccount} onClose={() => setShowAccount(false)} />}
     </div>
