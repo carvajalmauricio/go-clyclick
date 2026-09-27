@@ -8,7 +8,9 @@ import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
 import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonStyles.js'
 import { LINK_ICONS, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
-import { BACKGROUND_PATTERNS } from '../../src/utils/themes.js'
+import { BACKGROUND_PATTERNS, THEMES } from '../../src/utils/themes.js'
+import { normalizeFont } from '../../src/utils/fonts.js'
+import { LANGUAGES } from '../../src/utils/i18n.js'
 
 export const KEY_PREFIX = 'business:'
 export const INDEX_KEY = 'businesses:index'
@@ -316,6 +318,51 @@ export function normalizeBusiness(payload) {
   const socialOrder = normalizeSocialOrder(payload.socialOrder ?? socialInput.order)
   const socialPosition = normalizeSocialPosition(payload.socialPosition)
 
+  // #8 Fuente personalizada: se valida contra el catálogo (inválida -> '').
+  const font = normalizeFont(payload.font)
+
+  // #16 Modo claro/oscuro automático: booleano + par de temas claro/oscuro.
+  // Los ids se validan contra THEMES; los inválidos caen a valores sensatos.
+  const autoTheme = payload.autoTheme === true || payload.autoTheme === 'true'
+  const validThemeId = (value, fallback) =>
+    typeof value === 'string' && Object.prototype.hasOwnProperty.call(THEMES, value) ? value : fallback
+  const lightTheme = validThemeId(payload.lightTheme, 'minimal')
+  const darkTheme = validThemeId(payload.darkTheme, 'vibrant')
+
+  // #18 Multi-idioma: subconjunto de LANGUAGES sin duplicados; 'es' siempre
+  // presente y por defecto. Overrides por idioma solo para name/description/category.
+  const requestedLangs = Array.isArray(payload.languages) ? payload.languages : []
+  const languages = ['es', ...requestedLangs
+    .map((lang) => String(lang || '').toLowerCase().trim())
+    .filter((lang) => LANGUAGES.includes(lang) && lang !== 'es')]
+    .filter((lang, index, list) => list.indexOf(lang) === index)
+  const i18nInput = payload.i18n && typeof payload.i18n === 'object' ? payload.i18n : {}
+  const i18n = {}
+  for (const lang of LANGUAGES) {
+    if (lang === 'es') continue // el español vive en los campos raíz del negocio
+    const entry = i18nInput[lang]
+    if (!entry || typeof entry !== 'object') continue
+    const override = {
+      name: String(entry.name || '').trim(),
+      description: String(entry.description || '').trim(),
+      category: String(entry.category || '').trim(),
+    }
+    // Solo se conserva si el idioma está habilitado y aporta algún valor.
+    if (languages.includes(lang) && (override.name || override.description || override.category)) {
+      i18n[lang] = override
+    }
+  }
+
+  // #19 Puerta de edad / contenido sensible: enabled + minAge (clamp 0-99) + mensaje.
+  const ageGateInput = payload.ageGate && typeof payload.ageGate === 'object' ? payload.ageGate : {}
+  const rawMinAge = Number(ageGateInput.minAge)
+  const minAge = Number.isFinite(rawMinAge) ? Math.max(0, Math.min(99, Math.round(rawMinAge))) : 18
+  const ageGate = {
+    enabled: ageGateInput.enabled === true || ageGateInput.enabled === 'true',
+    minAge,
+    message: String(ageGateInput.message || '').trim().slice(0, 300),
+  }
+
   const business = {
     slug,
     name,
@@ -328,6 +375,17 @@ export function normalizeBusiness(payload) {
     // Slides que rotan en la tarjeta de presentación después del slide base
     heroSlides: normalizeHeroSlides(payload.heroSlides),
     theme: String(payload.theme || 'vibrant'),
+    // Fuente personalizada del perfil (#8)
+    font,
+    // Modo claro/oscuro automático (#16)
+    autoTheme,
+    lightTheme,
+    darkTheme,
+    // Multi-idioma ES/EN (#18)
+    languages,
+    i18n,
+    // Puerta de edad / contenido sensible (#19)
+    ageGate,
     background,
     buttonStyle,
     // Colores personalizados (solo se usan si theme === 'custom')

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import SocialLinkItem from './SocialLinkItem.jsx'
 import ShareMenu from './ShareMenu.jsx'
@@ -12,11 +12,83 @@ import BankAccountDialog from './BankAccountDialog.jsx'
 import { animationClass, innerAnimationClass } from '../utils/animations.js'
 import HeroCarousel from './HeroCarousel.jsx'
 import { buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
+import { getFont, fontStylesheetUrl } from '../utils/fonts.js'
+import { t, LANGUAGE_LABELS } from '../utils/i18n.js'
+
+// Suscribe a prefers-color-scheme: dark (mismo patrón que usePrefersReducedMotion).
+// Devuelve true cuando el sistema pide modo oscuro. Reacciona a los cambios.
+function usePrefersDark() {
+  const query = '(prefers-color-scheme: dark)'
+  const [dark, setDark] = useState(() => typeof window !== 'undefined' && window.matchMedia?.(query).matches)
+  useEffect(() => {
+    const media = window.matchMedia?.(query)
+    if (!media) return
+    const update = () => setDark(media.matches)
+    media.addEventListener?.('change', update)
+    return () => media.removeEventListener?.('change', update)
+  }, [])
+  return dark
+}
+
+// Idiomas habilitados del negocio (siempre incluye 'es').
+function enabledLanguages(business) {
+  const langs = Array.isArray(business.languages) ? business.languages.filter((l) => l === 'es' || l === 'en') : []
+  return langs.includes('es') ? langs : ['es', ...langs]
+}
+
+// Aplica los overrides de idioma (name/description/category) sobre el negocio.
+// El español usa siempre los campos raíz; otros idiomas usan business.i18n[lang].
+function localizeBusiness(business, lang) {
+  if (lang === 'es') return business
+  const override = business.i18n?.[lang]
+  if (!override) return business
+  return {
+    ...business,
+    name: override.name || business.name,
+    description: override.description || business.description,
+    category: override.category || business.category,
+  }
+}
+
+// Inyecta el <link> del stylesheet de Google Fonts solo cuando hay fuente
+// seleccionada. Se elimina al desmontar o cambiar de fuente.
+function useProfileFont(fontValue) {
+  useEffect(() => {
+    if (typeof document === 'undefined') return
+    const href = fontStylesheetUrl(fontValue)
+    if (!href) return
+    if (document.querySelector(`link[data-profile-font][href="${href}"]`)) return
+    const link = document.createElement('link')
+    link.rel = 'stylesheet'
+    link.href = href
+    link.setAttribute('data-profile-font', fontValue)
+    document.head.appendChild(link)
+    return () => {
+      link.remove()
+    }
+  }, [fontValue])
+}
 
 // Vista de presentación del perfil de un negocio.
 // Se usa en la página pública y dentro del simulador móvil del admin.
-export default function ProfileView({ business, compact = false }) {
-  const theme = resolveTheme(business.theme, business.customColors)
+export default function ProfileView({ business: rawBusiness, compact = false }) {
+  const langs = enabledLanguages(rawBusiness)
+  const [lang, setLang] = useState('es')
+  const activeLang = langs.includes(lang) ? lang : 'es'
+  const business = localizeBusiness(rawBusiness, activeLang)
+
+  // #16 Modo claro/oscuro automático: cuando está activo, elige entre el tema
+  // claro y el oscuro configurados según prefers-color-scheme del sistema.
+  const prefersDark = usePrefersDark()
+  const themeId = rawBusiness.autoTheme
+    ? (prefersDark ? (rawBusiness.darkTheme || 'vibrant') : (rawBusiness.lightTheme || 'minimal'))
+    : business.theme
+
+  // #8 Fuente personalizada: carga el stylesheet solo si hay fuente elegida.
+  useProfileFont(rawBusiness.font)
+  const font = getFont(rawBusiness.font)
+
+  const theme = resolveTheme(themeId, business.customColors)
   const actions = buildActions(business)
   const socials = buildSocials(business)
   const socialPosition = normalizeSocialPosition(business.socialPosition)
@@ -33,8 +105,31 @@ export default function ProfileView({ business, compact = false }) {
   return (
     <div
       className={`${compact ? 'min-h-full' : 'min-h-screen'} profile-background relative w-full flex flex-col items-center overflow-hidden`}
-      style={{ ...getBackgroundStyle(theme, ['image', 'video'].includes(background.type) ? null : background), color: theme.text }}
+      style={{ ...getBackgroundStyle(theme, ['image', 'video'].includes(background.type) ? null : background), color: theme.text, ...(font ? { fontFamily: font.family } : {}) }}
     >
+      {langs.length > 1 && (
+        <div
+          className={`absolute z-20 flex items-center gap-1 rounded-full p-1 backdrop-blur-md ${compact ? 'left-3 top-3' : 'left-5 top-5'}`}
+          style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, border: `1px solid ${theme.border}` }}
+          role="group"
+          aria-label={t(activeLang, 'languageLabel')}
+        >
+          {langs.map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLang(code)}
+              aria-pressed={activeLang === code}
+              className="rounded-full px-2.5 py-1 text-xs font-semibold transition"
+              style={activeLang === code
+                ? { background: theme.accent, color: theme.accentText }
+                : { color: theme.text, opacity: 0.7 }}
+            >
+              {LANGUAGE_LABELS[code] || code.toUpperCase()}
+            </button>
+          ))}
+        </div>
+      )}
       {['image', 'video'].includes(background.type) && background.url && (
         <>
           <div aria-hidden="true" className="absolute pointer-events-none" style={{ inset: -Math.max(0, Math.min(30, Number(background.blur) || 0)) * 2, filter: `blur(${Math.max(0, Math.min(30, Number(background.blur) || 0))}px)` }}>
@@ -57,7 +152,7 @@ export default function ProfileView({ business, compact = false }) {
 
         {/* Botones de acción */}
         <div className="mt-6 flex w-full flex-col gap-5">
-          <ActionGroup actions={actions.filter((action) => !action.sectionId)} business={business} theme={theme} />
+          <ActionGroup actions={actions.filter((action) => !action.sectionId)} business={business} theme={theme} lang={activeLang} />
           {sections.map((section) => {
             const grouped = actions.filter((action) => action.sectionId === section.id)
             if (!grouped.length) return null
@@ -66,7 +161,7 @@ export default function ProfileView({ business, compact = false }) {
                 <h2 className="mb-3 px-1 text-xs font-bold uppercase tracking-[.16em]" style={{ color: theme.subtext }}>
                   {section.title}
                 </h2>
-                <ActionGroup actions={grouped} business={business} theme={theme} />
+                <ActionGroup actions={grouped} business={business} theme={theme} lang={activeLang} />
               </section>
             )
           })}
@@ -79,7 +174,7 @@ export default function ProfileView({ business, compact = false }) {
         <footer className="mt-auto pt-10 w-full flex flex-col items-center gap-2">
           <ClickClickLogo color={theme.text} />
           <div className="text-center text-xs" style={{ color: theme.subtext }}>
-            Powered by <span style={{ color: theme.text, fontWeight: 600 }}>ClyClick</span> · Conecta tu negocio con un toque
+            {t(activeLang, 'poweredBy')} <span style={{ color: theme.text, fontWeight: 600 }}>ClyClick</span> · {t(activeLang, 'tagline')}
           </div>
         </footer>
       </div>
@@ -87,7 +182,7 @@ export default function ProfileView({ business, compact = false }) {
   )
 }
 
-function ActionGroup({ actions, business, theme }) {
+function ActionGroup({ actions, business, theme, lang = 'es' }) {
   if (!actions.length) return null
   // Agrupa acciones consecutivas con layout 'grid' dentro de una cuadrícula de
   // 2 columnas; el resto (classic/featured/icon) mantiene el flujo apilado.
@@ -107,18 +202,18 @@ function ActionGroup({ actions, business, theme }) {
         chunk.grid ? (
           <div key={`grid-${index}`} className="grid grid-cols-2 gap-3">
             {chunk.items.map((action) => (
-              <ActionCard key={action.key} action={action} business={business} theme={theme} />
+              <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} />
             ))}
           </div>
         ) : (
-          <ActionCard key={chunk.items[0].key} action={chunk.items[0]} business={business} theme={theme} />
+          <ActionCard key={chunk.items[0].key} action={chunk.items[0]} business={business} theme={theme} lang={lang} />
         )
       )}
     </div>
   )
 }
 
-function ActionCard({ action, business, theme }) {
+function ActionCard({ action, business, theme, lang = 'es' }) {
   const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
   const radius = buttonRadius(style.shape)
@@ -136,7 +231,7 @@ function ActionCard({ action, business, theme }) {
   const content = layout === 'featured' ? (
     <>
       {action.thumbnail ? (
-        <img src={action.thumbnail} alt="" className="aspect-video w-full object-cover" />
+        <img src={action.thumbnail} alt={action.label || ''} className="aspect-video w-full object-cover" />
       ) : (
         <div className="flex aspect-[2.4/1] w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
           <Icon name={action.icon} size={48} />
@@ -151,7 +246,7 @@ function ActionCard({ action, business, theme }) {
   ) : layout === 'grid' ? (
     <>
       {action.thumbnail ? (
-        <img src={action.thumbnail} alt="" className="aspect-square w-full object-cover" />
+        <img src={action.thumbnail} alt={action.label || ''} className="aspect-square w-full object-cover" />
       ) : (
         <div className="flex aspect-square w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
           <Icon name={action.icon} size={40} />
@@ -163,7 +258,7 @@ function ActionCard({ action, business, theme }) {
     <Icon name={action.icon} size={24} />
   ) : (
     <>
-      {action.bank ? <BankLogo bank={action.bank} /> : action.thumbnail ? <img src={action.thumbnail} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
+      {action.bank ? <BankLogo bank={action.bank} label={action.label} /> : action.thumbnail ? <img src={action.thumbnail} alt={action.label || ''} className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : <Icon name={action.icon} size={21} />}
       <span className="min-w-0 flex-1 break-words text-left">
         {action.label}
         {action.bankAccount?.number && <span className="mt-0.5 block text-xs opacity-75">{action.bankAccount.accountType === 'checking' ? 'Corriente' : 'Ahorros'} · {action.bankAccount.number.slice(-4)}</span>}

@@ -7,7 +7,8 @@ import HeroSlidesManager from './HeroSlidesManager.jsx'
 import { uploadLogo } from '../utils/api.js'
 import { resolveTheme, THEME_LIST } from '../utils/themes.js'
 import { getActionSettings, buildSocials, SOCIAL_NETWORKS, SOCIAL_POSITIONS, normalizeSocialPosition, normalizeSocialOrder } from '../utils/links.js'
-import { Field, FileButton, IconButton, SectionCard, SubHeading, inputCls } from './admin/ui.jsx'
+import { Field, FileButton, IconButton, SectionCard, SubHeading, Toggle, inputCls } from './admin/ui.jsx'
+import { FONTS } from '../utils/fonts.js'
 
 // Secciones del formulario. El editor las usa también para la navegación rápida.
 export const FORM_SECTIONS = [
@@ -31,6 +32,10 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
   const set = (field) => (e) => onChange({ [field]: e.target.value })
   const setSocial = (field) => (e) =>
     onChange({ social: { ...(b.social || {}), [field]: e.target.value } })
+  const setI18n = (lang, field) => (e) =>
+    onChange({ i18n: { ...(b.i18n || {}), [lang]: { ...(b.i18n?.[lang] || {}), [field]: e.target.value } } })
+  const setAgeGate = (field, val) =>
+    onChange({ ageGate: { ...(b.ageGate || {}), [field]: val } })
 
   // Orden efectivo de las redes activas (para reordenar en el editor). Se basa
   // en buildSocials, que ya respeta socialOrder y filtra las redes con valor.
@@ -263,6 +268,101 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
           onBackgroundChange={(background) => onChange({ background })}
           onButtonStyleChange={(buttonStyle) => onChange({ buttonStyle })}
         />
+
+        <SubHeading>Fuente del perfil</SubHeading>
+        <Field label="Tipografía" hint="Se carga solo cuando eliges una fuente. Vacío usa la del tema.">
+          <select className={inputCls} value={b.font || ''} onChange={set('font')}>
+            <option value="">Fuente del tema (por defecto)</option>
+            {FONTS.map((font) => (
+              <option key={font.value} value={font.value}>{font.label}</option>
+            ))}
+          </select>
+        </Field>
+
+        <SubHeading>Modo claro/oscuro automático</SubHeading>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300">Adaptar al sistema del visitante</p>
+            <p className="text-[11px] text-gray-500">Elige el tema según prefiera claro u oscuro.</p>
+          </div>
+          <Toggle checked={b.autoTheme === true} onChange={(checked) => onChange({ autoTheme: checked })} label="Modo claro/oscuro automático" />
+        </div>
+        {b.autoTheme && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Tema en modo claro">
+              <select className={inputCls} value={b.lightTheme || 'minimal'} onChange={set('lightTheme')}>
+                {THEME_LIST.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </Field>
+            <Field label="Tema en modo oscuro">
+              <select className={inputCls} value={b.darkTheme || 'vibrant'} onChange={set('darkTheme')}>
+                {THEME_LIST.map((t) => (
+                  <option key={t.id} value={t.id}>{t.name}</option>
+                ))}
+              </select>
+            </Field>
+          </div>
+        )}
+
+        <SubHeading>Idiomas del perfil</SubHeading>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300">Habilitar inglés (además de español)</p>
+            <p className="text-[11px] text-gray-500">Muestra un selector de idioma en el perfil.</p>
+          </div>
+          <Toggle
+            checked={Array.isArray(b.languages) && b.languages.includes('en')}
+            onChange={(checked) => onChange({ languages: checked ? ['es', 'en'] : ['es'] })}
+            label="Habilitar inglés"
+          />
+        </div>
+        {Array.isArray(b.languages) && b.languages.includes('en') && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nombre (EN)">
+              <input className={inputCls} value={b.i18n?.en?.name || ''} onChange={setI18n('en', 'name')} placeholder={b.name || 'Business name'} />
+            </Field>
+            <Field label="Categoría (EN)">
+              <input className={inputCls} value={b.i18n?.en?.category || ''} onChange={setI18n('en', 'category')} placeholder={b.category || 'Category'} />
+            </Field>
+            <Field label="Descripción (EN)" className="sm:col-span-2">
+              <textarea className={inputCls} rows={2} value={b.i18n?.en?.description || ''} onChange={setI18n('en', 'description')} placeholder={b.description || 'Description'} />
+            </Field>
+          </div>
+        )}
+
+        <SubHeading>Puerta de edad / contenido sensible</SubHeading>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300">Pedir confirmación de edad</p>
+            <p className="text-[11px] text-gray-500">Bloquea el perfil hasta confirmar la edad.</p>
+          </div>
+          <Toggle checked={b.ageGate?.enabled === true} onChange={(checked) => setAgeGate('enabled', checked)} label="Puerta de edad" />
+        </div>
+        {b.ageGate?.enabled && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Edad mínima">
+              <input
+                className={inputCls}
+                type="number"
+                min={0}
+                max={99}
+                value={Number.isFinite(Number(b.ageGate?.minAge)) ? b.ageGate.minAge : 18}
+                onChange={(e) => setAgeGate('minAge', e.target.value === '' ? '' : Number(e.target.value))}
+              />
+            </Field>
+            <Field label="Mensaje personalizado (opcional)" className="sm:col-span-2">
+              <textarea
+                className={inputCls}
+                rows={2}
+                value={b.ageGate?.message || ''}
+                onChange={(e) => setAgeGate('message', e.target.value)}
+                placeholder="Este perfil contiene contenido para adultos."
+              />
+            </Field>
+          </div>
+        )}
       </SectionCard>
     </div>
   )
@@ -284,6 +384,12 @@ function getSummaries(b) {
   const socials = Object.values(b.social || {}).filter(Boolean).length
   const contact = [b.phone, b.email, b.website].filter(Boolean).length
   const themeName = b.theme === 'custom' ? 'Personalizado' : THEME_LIST.find((t) => t.id === b.theme)?.name || b.theme
+  const designExtras = [
+    b.font ? 'fuente propia' : '',
+    b.autoTheme ? 'auto claro/oscuro' : '',
+    Array.isArray(b.languages) && b.languages.includes('en') ? 'ES/EN' : '',
+    b.ageGate?.enabled ? 'puerta de edad' : '',
+  ].filter(Boolean)
   return {
     basic: [b.name || 'Sin nombre', b.category, b.logo ? 'con logo' : 'sin logo'].filter(Boolean).join(' · '),
     slides: b.heroSlides?.enabled && slides
@@ -292,6 +398,6 @@ function getSummaries(b) {
     actions: `${plural(destinations, 'destino configurado', 'destinos configurados')} · ${plural(enabledActions.length, 'botón activo', 'botones activos')}${customLinks ? ` · ${plural(customLinks, 'enlace personalizado', 'enlaces personalizados')}` : ''}`,
     bank: accounts ? plural(accounts, 'cuenta', 'cuentas') : 'Sin cuentas',
     contact: `${plural(contact, 'dato de contacto', 'datos de contacto')} · ${plural(socials, 'red social', 'redes sociales')}`,
-    design: `Tema ${themeName}`,
+    design: [`Tema ${themeName}`, ...designExtras].join(' · '),
   }
 }

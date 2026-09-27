@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useParams } from 'react-router-dom'
 import ProfileView from '../components/ProfileView.jsx'
+import AgeGate from '../components/AgeGate.jsx'
 import NotFound from './NotFound.jsx'
 
 // Lee el negocio incrustado en el HTML (window.__BUSINESS__) solo si su slug
@@ -72,7 +73,11 @@ export default function PublicProfile() {
     )
   }
 
-  return <ProfileView business={state.business} />
+  return (
+    <AgeGate business={state.business}>
+      <ProfileView business={state.business} />
+    </AgeGate>
+  )
 }
 
 function ProfileSkeleton() {
