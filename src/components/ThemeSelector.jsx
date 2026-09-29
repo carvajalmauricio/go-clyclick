@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react'
-import { BACKGROUND_PATTERNS, THEME_LIST } from '../utils/themes.js'
-import { BUTTON_SHADOWS, BUTTON_SHAPES, BUTTON_VARIANTS, buttonRadius } from '../utils/buttonStyles.js'
+import { BACKGROUND_PATTERNS, THEME_LIST, cardTextColor, getBackgroundStyle, resolveTheme } from '../utils/themes.js'
+import { BUTTON_SHADOWS, BUTTON_SHAPES, BUTTON_VARIANTS, buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
+import { getButtonColors } from '../utils/buttonColors.js'
 import { uploadMedia } from '../utils/api.js'
 
 export default function ThemeSelector({ value, customColors, background, buttonStyle, slug, onChange, onCustomChange, onBackgroundChange, onButtonStyleChange }) {
@@ -9,6 +10,7 @@ export default function ThemeSelector({ value, customColors, background, buttonS
   const [error, setError] = useState('')
   const bg = background || { type: 'theme', pattern: 'none', overlay: 0.25 }
   const buttons = buttonStyle || { shape: 'rounded', variant: 'filled', shadow: 'soft' }
+  const theme = resolveTheme(value, customColors)
 
   async function uploadBackground(event) {
     const file = event.target.files?.[0]
@@ -40,7 +42,7 @@ export default function ThemeSelector({ value, customColors, background, buttonS
               style={{ background: theme.bgGradient || theme.bg, color: theme.text }}
             >
               {theme.pattern && <span className={`profile-pattern profile-pattern-${theme.pattern}`} />}
-              <span className="absolute inset-x-2 bottom-2 rounded-lg px-2 py-1 text-[11px] font-semibold backdrop-blur" style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)` }}>{theme.name}</span>
+              <span className="absolute inset-x-2 bottom-2 rounded-lg px-2 py-1 text-[11px] font-semibold backdrop-blur" style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, color: cardTextColor(theme) }}>{theme.name}</span>
             </button>
           ))}
           <button type="button" onClick={() => onChange('custom')} className={`h-28 rounded-2xl border bg-gray-800 p-3 text-left text-xs font-semibold text-white ${value === 'custom' ? 'ring-2 ring-clickclick-orange border-transparent' : 'border-gray-600'}`}>
@@ -95,9 +97,10 @@ export default function ThemeSelector({ value, customColors, background, buttonS
 
       <div className="rounded-xl border border-gray-700 bg-gray-900/50 p-4">
         <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-clickclick-orange">Estilo de botones</p>
-        <SelectButtons label="Forma" value={buttons.shape || 'rounded'} options={BUTTON_SHAPES} onChange={(shape) => onButtonStyleChange({ ...buttons, shape })} renderIcon={(option) => <span aria-hidden="true" className="mx-auto mb-1 block h-4 w-9 border-2 border-current" style={{ borderRadius: buttonRadius(option.value) }} />} />
-        <SelectButtons label="Acabado" value={buttons.variant || 'filled'} options={BUTTON_VARIANTS} onChange={(variant) => onButtonStyleChange({ ...buttons, variant })} renderIcon={(option) => <VariantSwatch variant={option.value} />} />
-        <SelectButtons label="Sombra" value={buttons.shadow || 'soft'} options={BUTTON_SHADOWS} onChange={(shadow) => onButtonStyleChange({ ...buttons, shadow })} />
+        <p className="mb-3 text-[11px] text-gray-500">Cada opción muestra el botón tal como se verá en el perfil con el tema y el fondo actuales.</p>
+        <SelectButtons label="Forma" value={buttons.shape || 'rounded'} options={BUTTON_SHAPES} onChange={(shape) => onButtonStyleChange({ ...buttons, shape })} renderIcon={(option) => <ButtonSample theme={theme} background={bg} style={{ ...buttons, shape: option.value }} />} />
+        <SelectButtons label="Acabado" value={buttons.variant || 'filled'} options={BUTTON_VARIANTS} onChange={(variant) => onButtonStyleChange({ ...buttons, variant })} renderIcon={(option) => <ButtonSample theme={theme} background={bg} style={{ ...buttons, variant: option.value }} />} />
+        <SelectButtons label="Sombra" value={buttons.shadow || 'soft'} options={BUTTON_SHADOWS} onChange={(shadow) => onButtonStyleChange({ ...buttons, shadow })} renderIcon={(option) => <ButtonSample theme={theme} background={bg} style={{ ...buttons, shadow: option.value }} />} />
       </div>
     </div>
   )
@@ -129,14 +132,29 @@ function SelectButtons({ label, value, options, onChange, renderIcon }) {
   )
 }
 
-// Miniatura del acabado para reconocerlo de un vistazo.
-function VariantSwatch({ variant }) {
-  const styles = {
-    filled: { background: '#F49120' },
-    outline: { border: '2px solid currentColor' },
-    glass: { background: 'rgba(255,255,255,.25)', border: '1px solid rgba(255,255,255,.4)' },
-    gradient: { background: 'linear-gradient(135deg, #F49120, #a855f7)' },
-    neon: { border: '2px solid #5eead4', boxShadow: '0 0 8px #5eead4, inset 0 0 4px #5eead4' },
-  }
-  return <span aria-hidden="true" className="mx-auto mb-1 block h-4 w-9 rounded" style={styles[variant]} />
+// Miniatura fiel del botón: usa las mismas funciones que el perfil público
+// (colores, radio, borde y sombra) sobre el fondo del tema, para que la
+// opción represente de verdad lo que se mostrará.
+function ButtonSample({ theme, background, style }) {
+  const colors = getButtonColors({}, theme, style)
+  const surface = ['image', 'video'].includes(background?.type) ? null : background
+  return (
+    <span aria-hidden="true" className="relative mb-1.5 block overflow-hidden rounded-md px-2 py-2.5" style={getBackgroundStyle(theme, surface)}>
+      {(surface?.pattern || theme.pattern) && (surface?.pattern || theme.pattern) !== 'none' && <span className={`profile-pattern profile-pattern-${surface?.pattern || theme.pattern}`} />}
+      <span
+        className="relative flex h-5 items-center gap-1 px-2 backdrop-blur-sm"
+        style={{
+          background: colors.background,
+          color: colors.text,
+          border: `${buttonBorderWidth(style.variant)}px solid ${colors.border}`,
+          borderRadius: buttonRadius(style.shape),
+          // La sombra se reduce a escala de miniatura.
+          boxShadow: buttonShadow(style, theme, colors.border).replace(/5px 5px 0/g, '3px 3px 0').replace(/0 8px 24px/g, '0 3px 8px'),
+        }}
+      >
+        <span className="h-1.5 w-1.5 shrink-0 rounded-full" style={{ background: 'currentColor' }} />
+        <span className="h-1 flex-1 rounded-full opacity-70" style={{ background: 'currentColor' }} />
+      </span>
+    </span>
+  )
 }

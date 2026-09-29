@@ -20,14 +20,42 @@ body {
   background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
   background-size: 34px 34px;
 }
+/* Formas (Blue Shapes): círculos perfectos y alineados.
+   - Antes: elipses en mosaicos de tamaños distintos (210×230, 280×250…) que se
+     desalineaban entre sí, se deformaban y se cortaban en el borde del mosaico.
+   - Ahora: el patrón es un contenedor de tamaño y todo se mide en cqw (ancho del
+     patrón), así los círculos son siempre redondos, mantienen su proporción en
+     el teléfono, el escritorio y la miniatura del editor, y siguen una retícula
+     escalonada regular. Los círculos grandes se anclan a las esquinas. */
 .profile-pattern-shapes {
+  opacity: 1;
+  container-type: size;
+  overflow: hidden;
+}
+.profile-pattern-shapes::before,
+.profile-pattern-shapes::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+}
+/* Círculos grandes anclados: arriba-derecha, centro-izquierda y abajo-derecha. */
+.profile-pattern-shapes::before {
   background:
-    radial-gradient(ellipse at 12% 18%, rgba(255,255,255,.22) 0 9%, transparent 9.5%),
-    radial-gradient(ellipse at 88% 10%, rgba(5,18,50,.3) 0 13%, transparent 13.5%),
-    radial-gradient(ellipse at 75% 52%, rgba(255,255,255,.16) 0 12%, transparent 12.5%),
-    radial-gradient(ellipse at 20% 78%, rgba(8,31,76,.34) 0 15%, transparent 15.5%),
-    radial-gradient(ellipse at 92% 91%, rgba(255,255,255,.2) 0 10%, transparent 10.5%);
-  background-size: 210px 230px, 280px 250px, 260px 300px, 300px 250px, 230px 210px;
+    radial-gradient(circle at calc(100% + min(10cqw, 60px)) calc(min(10cqw, 60px) * -1), rgba(255,255,255,.16) 0 min(42cqw, 260px), transparent calc(min(42cqw, 260px) + 1px)),
+    radial-gradient(circle at calc(100% + min(10cqw, 60px)) calc(min(10cqw, 60px) * -1), transparent 0 min(56cqw, 340px), rgba(255,255,255,.12) calc(min(56cqw, 340px) + 1px) calc(min(56cqw, 340px) + 2px), transparent calc(min(56cqw, 340px) + 3px)),
+    radial-gradient(circle at calc(min(14cqw, 90px) * -1) 46%, rgba(8,31,76,.32) 0 min(34cqw, 210px), transparent calc(min(34cqw, 210px) + 1px)),
+    radial-gradient(circle at calc(100% + min(8cqw, 50px)) calc(100% + min(8cqw, 50px)), rgba(8,31,76,.3) 0 min(46cqw, 280px), transparent calc(min(46cqw, 280px) + 1px)),
+    radial-gradient(circle at min(22cqw, 140px) calc(100% - min(18cqw, 110px)), rgba(255,255,255,.14) 0 min(9cqw, 56px), transparent calc(min(9cqw, 56px) + 1px));
+}
+/* Retícula escalonada de puntos: todos del mismo tamaño y en filas alineadas. */
+.profile-pattern-shapes::after {
+  background-image:
+    radial-gradient(circle, rgba(255,255,255,.17) 0 min(1.1cqw, 4.5px), transparent calc(min(1.1cqw, 4.5px) + 1px)),
+    radial-gradient(circle, rgba(255,255,255,.12) 0 min(.8cqw, 3.5px), transparent calc(min(.8cqw, 3.5px) + 1px));
+  background-size: min(16cqw, 72px) min(16cqw, 72px);
+  background-position: 0 0, calc(min(16cqw, 72px) / 2) calc(min(16cqw, 72px) / 2);
+  -webkit-mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.35) 45%, #000 100%);
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0,0,0,.35) 45%, #000 100%);
 }
 .profile-pattern-glow {
   background:
@@ -48,6 +76,51 @@ body {
   opacity: .55;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Ccircle cx='30' cy='34' r='14' fill='%23f97316' fill-opacity='.45'/%3E%3Cpath d='M120 18 L142 56 L98 56 Z' fill='%2306b6d4' fill-opacity='.4'/%3E%3Crect x='52' y='112' width='26' height='26' rx='4' transform='rotate(20 65 125)' fill='%23a855f7' fill-opacity='.38'/%3E%3Ccircle cx='150' cy='140' r='16' fill='none' stroke='%23facc15' stroke-opacity='.75' stroke-width='5'/%3E%3Cpath d='M92 96 h12 M98 90 v12' stroke='%23f43f5e' stroke-opacity='.6' stroke-width='3' stroke-linecap='round'/%3E%3Cpath d='M10 150 q10 -12 20 0 t20 0' fill='none' stroke='%2310b981' stroke-opacity='.55' stroke-width='3' stroke-linecap='round'/%3E%3C/svg%3E");
   background-size: 180px 180px;
+}
+/* Confetti: dos capas de confeti pastel que caen a distinta velocidad. */
+.profile-pattern-confetti {
+  opacity: 1;
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220' viewBox='0 0 220 220'%3E%3Cg fill-opacity='.75'%3E%3Crect x='24' y='20' width='12' height='5' rx='2.5' transform='rotate(35 30 22)' fill='%23f9a8d4'/%3E%3Crect x='120' y='40' width='12' height='5' rx='2.5' transform='rotate(-25 126 42)' fill='%2393c5fd'/%3E%3Crect x='186' y='96' width='12' height='5' rx='2.5' transform='rotate(60 192 98)' fill='%23fde68a'/%3E%3Crect x='64' y='120' width='12' height='5' rx='2.5' transform='rotate(-50 70 122)' fill='%2386efac'/%3E%3Crect x='150' y='176' width='12' height='5' rx='2.5' transform='rotate(15 156 178)' fill='%23c4b5fd'/%3E%3Ccircle cx='96' cy='76' r='3.5' fill='%23fca5a5'/%3E%3Ccircle cx='30' cy='186' r='3.5' fill='%2367e8f9'/%3E%3Ccircle cx='204' cy='24' r='3' fill='%23f0abfc'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Cg fill-opacity='.55'%3E%3Crect x='60' y='50' width='16' height='6' rx='3' transform='rotate(-40 68 53)' fill='%23fdba74'/%3E%3Crect x='230' y='130' width='16' height='6' rx='3' transform='rotate(20 238 133)' fill='%23f9a8d4'/%3E%3Crect x='120' y='240' width='16' height='6' rx='3' transform='rotate(70 128 243)' fill='%2393c5fd'/%3E%3Ccircle cx='190' cy='40' r='5' fill='%2386efac'/%3E%3Ccircle cx='40' cy='200' r='4.5' fill='%23c4b5fd'/%3E%3C/g%3E%3C/svg%3E");
+  background-size: 220px 220px, 300px 300px;
+  animation: profileConfetti 18s linear infinite;
+}
+@keyframes profileConfetti {
+  from { background-position: 0 0, 40px 0; }
+  to { background-position: 0 220px, 40px 600px; }
+}
+/* Rainbow: el degradado arcoíris se desplaza lentamente cambiando de tono. */
+.profile-pattern-rainbow {
+  opacity: 1;
+  background: linear-gradient(120deg, #ffd1dc, #ffe7a3, #c8f7c5, #bde0fe, #e4c1f9, #ffd1dc, #ffe7a3);
+  background-size: 400% 400%;
+  animation: profileRainbow 16s ease-in-out infinite alternate;
+}
+@keyframes profileRainbow {
+  from { background-position: 0% 50%; }
+  to { background-position: 100% 50%; }
+}
+/* Starry Night: dos capas de estrellas que suben despacio (paralaje). */
+.profile-pattern-stars {
+  opacity: 1;
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(244,114,182,.22), transparent 55%),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180' viewBox='0 0 180 180'%3E%3Cg fill='white'%3E%3Ccircle cx='20' cy='30' r='1.2' fill-opacity='.9'/%3E%3Ccircle cx='70' cy='12' r='.8' fill-opacity='.6'/%3E%3Ccircle cx='130' cy='50' r='1.4' fill-opacity='.85'/%3E%3Ccircle cx='160' cy='120' r='.9' fill-opacity='.6'/%3E%3Ccircle cx='96' cy='96' r='1' fill-opacity='.7'/%3E%3Ccircle cx='40' cy='140' r='1.3' fill-opacity='.8'/%3E%3Ccircle cx='110' cy='164' r='.8' fill-opacity='.5'/%3E%3C/g%3E%3C/svg%3E"),
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='260' viewBox='0 0 260 260'%3E%3Cg fill='%23f9a8d4'%3E%3Ccircle cx='50' cy='70' r='2' fill-opacity='.7'/%3E%3Ccircle cx='200' cy='30' r='1.6' fill-opacity='.6'/%3E%3Ccircle cx='150' cy='190' r='2.2' fill-opacity='.65'/%3E%3C/g%3E%3Cpath d='M220 150 l2 5 5 2 -5 2 -2 5 -2 -5 -5 -2 5 -2z' fill='white' fill-opacity='.8'/%3E%3Cpath d='M30 220 l1.5 4 4 1.5 -4 1.5 -1.5 4 -1.5 -4 -4 -1.5 4 -1.5z' fill='%23c4b5fd' fill-opacity='.9'/%3E%3C/svg%3E");
+  background-size: 140% 60%, 180px 180px, 260px 260px;
+  background-repeat: no-repeat, repeat, repeat;
+  background-position: 50% 105%, 0 0, 0 0;
+  animation: profileStars 40s linear infinite;
+}
+@keyframes profileStars {
+  from { background-position: 50% 105%, 0 0, 0 0; }
+  to { background-position: 50% 105%, 0 -180px, 0 -520px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .profile-pattern-confetti,
+  .profile-pattern-rainbow,
+  .profile-pattern-stars { animation: none; }
 }
 @keyframes profilePulse {
   0%, 100% { transform: scale(1); }

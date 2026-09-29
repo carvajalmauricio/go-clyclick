@@ -6,7 +6,7 @@ import ButtonColorFields from './ButtonColorFields.jsx'
 import AnimationSelector from './AnimationSelector.jsx'
 import { FileButton, IconButton, Toggle } from './admin/ui.jsx'
 import { getProfileSections } from '../utils/banking.js'
-import { BUTTON_LAYOUTS } from '../utils/buttonStyles.js'
+import LayoutSelector from './LayoutSelector.jsx'
 
 // Editor de enlaces personalizados ilimitados (más allá de los 7 botones fijos).
 // Cada enlace tiene título, URL, icono o miniatura, interruptor, orden,
@@ -113,14 +113,10 @@ export default function CustomLinksManager({ business, onChange }) {
                     <input value={item.url || ''} onChange={(event) => patch(item.id, { url: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white" placeholder="https://..." inputMode="url" />
                   </label>
                 </div>
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <label className="flex flex-col gap-1 text-xs text-gray-400">Icono
-                    <select value={item.icon || 'link'} onChange={(event) => patch(item.id, { icon: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white">{LINK_ICONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-                  </label>
-                  <label className="flex flex-col gap-1 text-xs text-gray-400">Presentación
-                    <select value={item.layout || 'classic'} onChange={(event) => patch(item.id, { layout: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white">{BUTTON_LAYOUTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-                  </label>
-                </div>
+                <label className="mt-3 flex flex-col gap-1 text-xs text-gray-400">Icono
+                  <select value={item.icon || 'link'} onChange={(event) => patch(item.id, { icon: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white">{LINK_ICONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
+                </label>
+                <LayoutSelector value={item.layout} onChange={(layout) => patch(item.id, { layout })} />
                 <div className="mt-3 grid grid-cols-2 gap-3">
                   <AnimationSelector value={item.animation} onChange={(animation) => patch(item.id, { animation })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white" />
                   <label className="flex flex-col gap-1 text-xs text-gray-400">Sección

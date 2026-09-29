@@ -1,4 +1,5 @@
 import { Icon } from './Icons.jsx'
+import { cardTextColor } from '../utils/themes.js'
 
 // Botón circular de red social
 export default function SocialLinkItem({ social, theme }) {
@@ -14,7 +15,7 @@ export default function SocialLinkItem({ social, theme }) {
         height: 46,
         background: theme.card,
         border: `1px solid ${theme.border}`,
-        color: theme.text,
+        color: cardTextColor(theme),
       }}
     >
       <Icon name={social.key} size={22} />

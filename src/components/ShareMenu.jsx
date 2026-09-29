@@ -39,7 +39,7 @@ export default function ShareMenu({ business, theme, compact = false }) {
         onClick={() => setOpen(true)}
         aria-label="Compartir perfil"
         className={`absolute z-20 flex items-center justify-center rounded-full backdrop-blur-md transition hover:scale-105 ${compact ? 'right-3 top-3 h-9 w-9' : 'right-5 top-5 h-11 w-11'}`}
-        style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, color: theme.text, border: `1px solid ${theme.border}` }}
+        style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, color: theme.cardText || theme.text, border: `1px solid ${theme.border}` }}
       >
         <Icon name="share" size={compact ? 17 : 20} />
       </button>

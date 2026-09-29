@@ -51,8 +51,23 @@ export function normalizeButtonStyle(value) {
   }
 }
 
-export function buttonRadius(shape) {
-  return (BUTTON_SHAPES.find((option) => option.value === shape) || BUTTON_SHAPES[1]).radius
+// Radios equivalentes para tarjetas altas (Destacado / Cuadrícula). Un radio de
+// 999px en una tarjeta de 200px de alto la convierte en un óvalo y recorta la
+// imagen y el título; estas versiones conservan el carácter de cada forma.
+const CARD_RADIUS = {
+  square: '8px',
+  rounded: '16px',
+  pill: '28px',
+  leaf: '28px 8px 28px 8px',
+  bubble: '24px 24px 24px 8px',
+}
+
+export function buttonRadius(shape, layout = 'classic') {
+  const option = BUTTON_SHAPES.find((item) => item.value === shape) || BUTTON_SHAPES[1]
+  if (layout === 'featured' || layout === 'grid') return CARD_RADIUS[option.value]
+  // Solo icono: la píldora se muestra como círculo perfecto.
+  if (layout === 'icon' && option.value === 'pill') return '50%'
+  return option.radius
 }
 
 export function buttonBorderWidth(variant) {
