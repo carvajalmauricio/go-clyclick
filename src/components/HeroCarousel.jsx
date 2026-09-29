@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getHeroSlides, normalizeInterval } from '../utils/heroSlides.js'
 import { descriptionColor } from '../utils/heroDescription.js'
+import { logoPixels, logoRadius, normalizeHeader } from '../utils/header.js'
 
 // Re-exporta el helper puro para compatibilidad con importadores previos.
 export { descriptionColor }
@@ -223,14 +224,14 @@ function Carousel({ slides, business, theme, compact, interval }) {
                 aria-roledescription={isClone ? undefined : 'slide'}
                 aria-label={isClone ? undefined : `${index + 1} de ${count}`}
               >
-                <HeroSlide slide={slide} business={business} theme={theme} compact={compact} asHeading={!isClone && slide.isBase} />
+                <HeroSlide slide={slide} business={business} theme={theme} compact={compact} asHeading={!isClone && slide.isBase} priority={index === 0} />
               </div>
             )
           })}
         </div>
       </div>
 
-      <div className="mt-4 flex justify-center gap-2">
+      <div className={`mt-4 flex gap-2 ${normalizeHeader(business.header).align === 'left' ? 'justify-start px-1' : 'justify-center'}`}>
         {slides.map((slide, index) => (
           <button
             key={slide.id}
@@ -251,8 +252,10 @@ function Carousel({ slides, business, theme, compact, interval }) {
   )
 }
 
-function HeroSlide({ slide, business, theme, compact, asHeading = true }) {
-  const size = compact ? 84 : 104
+function HeroSlide({ slide, business, theme, compact, asHeading = true, priority = true }) {
+  const header = normalizeHeader(business.header)
+  const size = logoPixels(header.logoSize, compact)
+  const left = header.align === 'left'
   const initials = (slide.title || business.name || '?')
     .split(' ')
     .map((w) => w[0])
@@ -263,20 +266,31 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true }) {
   const title = slide.isBase ? slide.title || 'Nombre del negocio' : slide.title
 
   return (
-    <div className="flex w-full flex-col items-center">
+    <div className={`flex w-full flex-col ${left ? 'items-start text-left' : 'items-center text-center'}`}>
       <div
-        className="rounded-full flex items-center justify-center overflow-hidden shadow-lg shrink-0"
-        style={{ width: size, height: size, background: theme.card, border: `2px solid ${theme.accent}` }}
+        className="flex shrink-0 items-center justify-center overflow-hidden shadow-lg"
+        style={{ width: size, height: size, borderRadius: logoRadius(header.logoShape, size), background: theme.card, border: `2px solid ${theme.accent}` }}
       >
         {slide.image ? (
-          <img src={slide.image} alt={slide.title || business.name} draggable={false} className="w-full h-full object-cover" />
+          // El primer slide se pinta de inmediato; el resto se carga al necesitarse.
+          <img
+            src={slide.image}
+            alt={slide.title || business.name}
+            width={size}
+            height={size}
+            draggable={false}
+            loading={priority ? 'eager' : 'lazy'}
+            fetchpriority={priority ? 'high' : 'low'}
+            decoding="async"
+            className="h-full w-full object-cover"
+          />
         ) : (
-          <span style={{ color: theme.cardText || theme.accent, fontSize: compact ? 30 : 38, fontWeight: 700 }}>{initials}</span>
+          <span style={{ color: theme.cardText || theme.accent, fontSize: Math.round(size * 0.36), fontWeight: 700 }}>{initials}</span>
         )}
       </div>
 
       {title && (
-        <Title className="mt-4 text-center font-bold break-words" style={{ fontSize: compact ? 20 : 26 }}>
+        <Title className="mt-4 break-words font-bold" style={{ fontSize: compact ? 20 : 26 }}>
           {title}
         </Title>
       )}
@@ -286,7 +300,7 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true }) {
         </span>
       )}
       {slide.description && (
-        <p className="mt-3 text-center text-sm" style={{ color: descriptionColor(business, theme) }}>
+        <p className="mt-3 text-sm" style={{ color: descriptionColor(business, theme) }}>
           {slide.description}
         </p>
       )}

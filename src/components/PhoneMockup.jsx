@@ -1,29 +1,42 @@
+import { useState } from 'react'
 import ProfileView from './ProfileView.jsx'
-import { isLightColor, resolveTheme } from '../utils/themes.js'
+import { isLightColor, themeColor } from '../utils/themes.js'
 
-// Tamaño lógico de un smartphone moderno (iPhone 14/15: 390 × 844 pt). El
-// perfil se renderiza a ese ancho real y se escala con `zoom`, así el preview
-// muestra exactamente los mismos tamaños, saltos de línea y proporciones que
-// verá el visitante en su teléfono.
+// Tamaños lógicos de móviles reales. El perfil se renderiza a ese ancho real y
+// se escala con `zoom`, así el preview muestra los mismos tamaños, saltos de
+// línea y proporciones que verá el visitante en su teléfono.
+export const DEVICES = [
+  { id: 'small', label: 'Pequeño', width: 360, height: 780 },
+  { id: 'standard', label: 'Estándar', width: 390, height: 844 },
+  { id: 'large', label: 'Grande', width: 430, height: 932 },
+]
 export const DEVICE_WIDTH = 390
 export const DEVICE_HEIGHT = 844
 const SCREEN_WIDTH = 316
-const SCALE = SCREEN_WIDTH / DEVICE_WIDTH
 const BEZEL = 10
 const STATUS_BAR = 44
 const URL_BAR = 44
 
+// Colores de la barra del navegador: Safari y Chrome la tiñen con theme-color.
+export function browserChrome(business, scheme) {
+  const background = business.background || {}
+  const top = ['image', 'video'].includes(background.type) ? '#111114' : themeColor(business, scheme === 'dark')
+  const light = isLightColor(top)
+  return light
+    ? { bar: top, text: '#111827', field: 'rgba(0,0,0,.07)', muted: '#6b7280' }
+    : { bar: top, text: '#f5f5f7', field: 'rgba(255,255,255,.12)', muted: '#a1a1aa' }
+}
+
+export function hostLabel(business) {
+  return `go.clyclick.online/${business.slug || 'tu-negocio'}`
+}
+
 // Simulador de smartphone que muestra el perfil en vivo mientras se edita.
-export default function PhoneMockup({ business }) {
-  const screenHeight = Math.round(DEVICE_HEIGHT * SCALE)
-  const theme = resolveTheme(business.theme, business.customColors)
-  const background = business.background || { type: 'theme' }
-  const baseColor = background.type === 'solid' || background.type === 'gradient' ? background.color || theme.bg : theme.bg
-  const lightChrome = ['image', 'video'].includes(background.type) ? false : isLightColor(baseColor)
-  const chrome = lightChrome
-    ? { bar: '#f2f2f7', text: '#111827', field: '#e3e3e8', muted: '#6b7280' }
-    : { bar: '#1c1c1e', text: '#f5f5f7', field: '#2c2c2e', muted: '#a1a1aa' }
-  const host = `go.clyclick.online/${business.slug || 'tu-negocio'}`
+export default function PhoneMockup({ business, device = DEVICES[1], scheme, onSelect, highlightKey }) {
+  const [host, setHost] = useState(null)
+  const scale = SCREEN_WIDTH / device.width
+  const screenHeight = Math.round(device.height * scale)
+  const chrome = browserChrome(business, scheme)
 
   return (
     <div className="flex flex-col items-center">
@@ -34,10 +47,11 @@ export default function PhoneMockup({ business }) {
         {/* Pantalla: todo lo de dentro se dibuja a tamaño real y se escala */}
         <div className="h-full w-full overflow-hidden rounded-[2.4rem]" style={{ background: chrome.bar }}>
           <div
-            className="flex flex-col"
+            ref={setHost}
+            className="relative flex flex-col"
             // translateZ crea el bloque contenedor de los elementos `fixed`
-            // (p. ej. el menú Compartir) para que no se salgan del teléfono.
-            style={{ width: DEVICE_WIDTH, height: DEVICE_HEIGHT, zoom: SCALE, transform: 'translateZ(0)' }}
+            // (ventanas Compartir y cuentas) para que no se salgan del teléfono.
+            style={{ width: device.width, height: device.height, zoom: scale, transform: 'translateZ(0)' }}
           >
             {/* Barra de estado con Dynamic Island */}
             <div className="relative flex shrink-0 items-center justify-between px-8 text-[15px] font-semibold" style={{ height: STATUS_BAR, color: chrome.text }}>
@@ -48,22 +62,28 @@ export default function PhoneMockup({ business }) {
             {/* Barra del navegador */}
             <div className="flex shrink-0 items-center px-4 pb-2" style={{ height: URL_BAR }}>
               <div className="flex h-9 w-full items-center justify-center gap-1.5 truncate rounded-xl px-3 text-[14px]" style={{ background: chrome.field, color: chrome.text }}>
-                <svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><path d="M2 6V4a3.5 3.5 0 0 1 7 0v2h.5A1.5 1.5 0 0 1 11 7.5v4A1.5 1.5 0 0 1 9.5 13h-8A1.5 1.5 0 0 1 0 11.5v-4A1.5 1.5 0 0 1 1.5 6H2Zm1.5 0h4V4a2 2 0 0 0-4 0v2Z" fill={chrome.muted} /></svg>
-                <span className="truncate">{host}</span>
+                <LockIcon color={chrome.muted} />
+                <span className="truncate">{hostLabel(business)}</span>
               </div>
             </div>
             {/* Viewport del navegador: aquí vive el perfil real */}
-            <div className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <ProfileView business={business} embedded />
+            <div data-preview-scroller className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {host && <ProfileView business={business} embedded device="mobile" forceScheme={scheme} onSelect={onSelect} highlightKey={highlightKey} portalTarget={host} />}
             </div>
             {/* Indicador de inicio */}
-            <div aria-hidden="true" className="pointer-events-none absolute bottom-2 left-1/2 h-[5px] w-[134px] -translate-x-1/2 rounded-full" style={{ background: chrome.text, opacity: 0.55 }} />
+            <div aria-hidden="true" className="pointer-events-none absolute bottom-2 left-1/2 z-[60] h-[5px] w-[134px] -translate-x-1/2 rounded-full" style={{ background: chrome.text, opacity: 0.55 }} />
           </div>
         </div>
       </div>
-      <p className="mt-3 text-xs text-gray-400">Vista previa en vivo · {DEVICE_WIDTH}×{DEVICE_HEIGHT} (tamaño real de un móvil)</p>
+      <p className="mt-3 text-center text-xs text-gray-400">
+        {device.width}×{device.height} · tamaño real{onSelect ? ' · toca un elemento para editarlo' : ''}
+      </p>
     </div>
   )
+}
+
+export function LockIcon({ color }) {
+  return <svg width="11" height="13" viewBox="0 0 11 13" aria-hidden="true"><path d="M2 6V4a3.5 3.5 0 0 1 7 0v2h.5A1.5 1.5 0 0 1 11 7.5v4A1.5 1.5 0 0 1 9.5 13h-8A1.5 1.5 0 0 1 0 11.5v-4A1.5 1.5 0 0 1 1.5 6H2Zm1.5 0h4V4a2 2 0 0 0-4 0v2Z" fill={color} /></svg>
 }
 
 function StatusIcons({ color }) {

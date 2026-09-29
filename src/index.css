@@ -122,6 +122,51 @@ body {
   .profile-pattern-rainbow,
   .profile-pattern-stars { animation: none; }
 }
+/* ---------------------------------------------------------------------------
+   #4 Respuesta al tocar / pasar el mouse en el perfil
+   - El hover solo se aplica en dispositivos con puntero real (en el móvil el
+     :hover se queda "pegado" tras tocar).
+   - Al presionar se reduce un poco y se oscurece; con movimiento reducido
+     solo cambia el brillo.
+--------------------------------------------------------------------------- */
+.profile-press {
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .18s cubic-bezier(.2,.8,.2,1), filter .18s ease;
+}
+.profile-press:active { filter: brightness(.93); }
+@media (prefers-reduced-motion: no-preference) {
+  .profile-press:active { transform: scale(var(--press-active, .97)); transition-duration: .08s; }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .profile-press:hover { transform: scale(var(--press-hover, 1.015)); }
+  .profile-press:hover:active { transform: scale(var(--press-active, .97)); }
+}
+
+/* #12 Ventanas del perfil: hoja inferior en el móvil, centrada en escritorio. */
+@keyframes profileSheetIn { from { transform: translateY(100%); } to { transform: translateY(0); } }
+@keyframes profileSheetOut { from { transform: translateY(var(--sheet-offset, 0px)); } to { transform: translateY(100%); } }
+@keyframes profileDialogIn { from { opacity: 0; transform: translateY(12px) scale(.97); } to { opacity: 1; transform: none; } }
+@keyframes profileDialogOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(12px) scale(.97); } }
+@keyframes profileFadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes profileFadeOut { from { opacity: 1; } to { opacity: 0; } }
+.profile-sheet { transition: transform .22s cubic-bezier(.2,.8,.2,1); }
+@media (prefers-reduced-motion: no-preference) {
+  .profile-sheet-overlay { animation: profileFadeIn .2s ease backwards; }
+  .profile-sheet-overlay.is-closing { animation: profileFadeOut .22s ease both; }
+  /* backwards: al terminar no fija transform, así el arrastre puede moverla. */
+  .profile-sheet { animation: profileSheetIn .28s cubic-bezier(.2,.8,.2,1) backwards; }
+  .profile-sheet.is-centered { animation-name: profileDialogIn; }
+  .is-closing .profile-sheet { animation: profileSheetOut .22s ease-in both; }
+  .is-closing .profile-sheet.is-centered { animation-name: profileDialogOut; }
+}
+
+/* #6 Preview del editor: los elementos se pueden seleccionar. */
+.profile-selectable [data-preview-target] { cursor: pointer; }
+.profile-selectable [data-preview-target]:hover { outline: 2px dashed rgba(244,145,32,.9); outline-offset: 4px; border-radius: 14px; }
+.profile-selectable [data-preview-target^="action:"]:hover { border-radius: inherit; }
+/* Sin animación propia: el contenedor puede tener ya la animación del botón. */
+.profile-preview-highlight { outline: 3px solid #F49120 !important; outline-offset: 4px; }
+
 @keyframes profilePulse {
   0%, 100% { transform: scale(1); }
   50% { transform: scale(var(--profile-pulse-scale, 1.035)); }

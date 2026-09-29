@@ -3,6 +3,7 @@ import { BACKGROUND_PATTERNS, THEME_LIST, cardTextColor, getBackgroundStyle, res
 import { BUTTON_SHADOWS, BUTTON_SHAPES, BUTTON_VARIANTS, buttonBorderWidth, buttonRadius, buttonShadow } from '../utils/buttonStyles.js'
 import { getButtonColors } from '../utils/buttonColors.js'
 import { uploadMedia } from '../utils/api.js'
+import { compressImage } from '../utils/image.js'
 
 export default function ThemeSelector({ value, customColors, background, buttonStyle, slug, onChange, onCustomChange, onBackgroundChange, onButtonStyleChange }) {
   const fileInput = useRef(null)
@@ -18,7 +19,9 @@ export default function ThemeSelector({ value, customColors, background, buttonS
     setError('')
     setUploading(true)
     try {
-      const { url } = await uploadMedia(file, slug || 'general', 'background')
+      // #11 Las imágenes de fondo se comprimen en el navegador (máx. 2200 px).
+      const prepared = await compressImage(file, 2200)
+      const { url } = await uploadMedia(prepared, slug || 'general', 'background')
       onBackgroundChange({ ...bg, type: file.type.startsWith('video/') ? 'video' : 'image', url })
     } catch (uploadError) {
       setError(uploadError.message)

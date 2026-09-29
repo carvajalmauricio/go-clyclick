@@ -70,8 +70,29 @@ puedes cambiar su título o asignar las cuentas a otra sección.
   formas Píldora/Hoja/Burbuja usan un radio adaptado para no recortar imagen ni título.
 - Temas inspirados en Linktree: **Confetti**, **Rainbow** y **Starry Night** (con animación que se
   desactiva si el visitante pide movimiento reducido).
-- La vista previa del editor renderiza el perfil a tamaño real de móvil (390×844) y lo escala,
-  por lo que tamaños y saltos de línea coinciden con la página pública.
+- La vista previa del editor renderiza el perfil a tamaño real (móvil de 360, 390 o 430 px, o
+  escritorio 1280×800) y lo escala. Con el modo claro/oscuro automático se pueden ver ambos modos.
+  Tocar un elemento del preview abre su configuración, y el botón que se edita se resalta en el preview.
+
+## Perfil público
+
+- **Cabecera**: portada opcional (3:1), logo circular, redondeado o cuadrado en tres tamaños, y
+  alineación centrada o a la izquierda (`business.header`).
+- En pantallas de 768 px o más el perfil se muestra como un panel centrado sobre el fondo.
+- Compartir y los datos bancarios se abren en una hoja con los colores del tema; en el móvil se
+  cierra deslizándola hacia abajo, con Esc o tocando el fondo.
+- La barra del navegador móvil toma el color del tema (`<meta name="theme-color">`).
+- Miniaturas e imágenes secundarias se cargan de forma diferida.
+
+## Editor
+
+- Atajos: `Ctrl/⌘+S` guarda el borrador, `Ctrl/⌘+Z` y `Ctrl/⌘+Shift+Z` deshacen y rehacen (fuera de
+  los campos de texto; en el encabezado hay botones ↶ ↷), `Esc` cierra ventanas y `?` muestra la ayuda.
+- Logo, portada, miniaturas y slides se recortan en el navegador y se suben en WebP (o PNG/JPEG si
+  el navegador no admite WebP). SVG y GIF se suben sin procesar; los fondos solo se comprimen.
+- Cada sección muestra lo que le falta (por ejemplo, enlaces sin URL). Los errores bloquean la publicación.
+- El listado muestra una miniatura de cada perfil con su tema y avisa si hay un borrador sin publicar
+  en este navegador.
 - Las animaciones disponibles son **Pulso** (tamaño), **Flotar** (desplazamiento vertical),
   **Brillo** (luz en el contorno) y **Ninguna**. Con movimiento reducido mantienen su efecto
   propio con menor intensidad y velocidad.

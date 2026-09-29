@@ -6,19 +6,22 @@ import ButtonColorFields from './ButtonColorFields.jsx'
 import AnimationSelector from './AnimationSelector.jsx'
 import { FileButton, IconButton } from './admin/ui.jsx'
 import { Icon } from './Icons.jsx'
+import { FLASH_CLASS, editorItemId, useEditorFocus } from './admin/useEditorFocus.js'
 
 const inputClass = 'w-full rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-sm text-white'
 
-export default function BankAccountManager({ business, onChange }) {
+export default function BankAccountManager({ business, onChange, focus, onFocusItem }) {
   const [selectedBank, setSelectedBank] = useState('deuna')
   const latest = useRef({ business, onChange })
   latest.current = { business, onChange }
   const accounts = business.bankAccounts || []
   const sections = getProfileSections(business)
+  const flash = useEditorFocus(focus, (key) => (key.startsWith('bank-') && accounts.some((account) => `bank-${account.id}` === key) ? key : ''))
 
   function patch(id, changes) {
     const current = latest.current
     current.onChange({ bankAccounts: (current.business.bankAccounts || []).map((account) => account.id === id ? { ...account, ...changes } : account) })
+    onFocusItem?.(`bank-${id}`)
   }
 
   function addAccount() {
@@ -62,6 +65,7 @@ export default function BankAccountManager({ business, onChange }) {
           sections={sections}
           index={index}
           count={accounts.length}
+          flash={flash === `bank-${account.id}`}
           onChange={(changes) => patch(account.id, changes)}
           onMove={(direction) => move(account.id, direction)}
           onRemove={() => onChange({ bankAccounts: accounts.filter((item) => item.id !== account.id) })}
@@ -71,7 +75,7 @@ export default function BankAccountManager({ business, onChange }) {
   )
 }
 
-function BankAccountEditor({ account, business, sections, index, count, onChange, onMove, onRemove }) {
+function BankAccountEditor({ account, business, sections, index, count, flash, onChange, onMove, onRemove }) {
   const bank = BANKS.find((item) => item.id === account.bank)
   const [reading, setReading] = useState(false)
   const [message, setMessage] = useState('')
@@ -102,7 +106,7 @@ function BankAccountEditor({ account, business, sections, index, count, onChange
 
   if (!bank) return null
   return (
-    <fieldset className="min-w-0 rounded-xl border border-gray-700 bg-gray-900/70 p-4 pt-2">
+    <fieldset id={editorItemId(`bank-${account.id}`)} className={`min-w-0 scroll-mt-40 rounded-xl border border-gray-700 bg-gray-900/70 p-4 pt-2 transition-shadow ${flash ? FLASH_CLASS : ''}`}>
       <legend className="px-2 text-sm font-semibold">{bank.name} · Cuenta {index + 1}</legend>
       <div className="mb-4 flex items-center gap-2">
         <BankLogo bank={bank.id} />
@@ -147,13 +151,13 @@ function BankAccountEditor({ account, business, sections, index, count, onChange
         </div>
       )}
       <p className="mt-3 text-xs text-gray-400">{paymentUrl(account.url) ? 'Al tocar el botón se abrirá el enlace de pago.' : 'Al tocar el botón se mostrarán el titular y los datos de esta cuenta.'}</p>
-      <div className="mt-3 grid grid-cols-2 gap-3">
-        <label className="flex flex-col gap-1 text-xs text-gray-400">Sección de la cuenta
-          <select value={account.sectionId || BANK_SECTION_ID} onChange={(event) => onChange({ sectionId: event.target.value })} className={inputClass}>
-            {sections.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}
-          </select>
-        </label>
-        <AnimationSelector label="Animación de la cuenta" value={account.animation} onChange={(animation) => onChange({ animation })} className={inputClass} />
+      <label className="mt-3 flex flex-col gap-1 text-xs text-gray-400">Sección de la cuenta
+        <select value={account.sectionId || BANK_SECTION_ID} onChange={(event) => onChange({ sectionId: event.target.value })} className={inputClass}>
+          {sections.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}
+        </select>
+      </label>
+      <div className="mt-3">
+        <AnimationSelector label="Animación de la cuenta" value={account.animation} business={business} onChange={(animation) => onChange({ animation })} />
       </div>
       <ButtonColorFields business={business} action={account} onChange={(colors) => onChange({ colors })} />
     </fieldset>

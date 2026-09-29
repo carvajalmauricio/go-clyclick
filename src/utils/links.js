@@ -4,23 +4,46 @@ import { buildBankActions } from './banking.js'
 import { normalizeAnimation } from './animations.js'
 import { normalizeLayout } from './buttonStyles.js'
 
-// Iconos disponibles para los enlaces personalizados. Todos reutilizan cases
-// existentes en src/components/Icons.jsx (no se inventan SVG nuevos).
+// Iconos disponibles para los enlaces personalizados. Cada valor debe tener
+// su case en src/components/Icons.jsx.
+// `keywords` alimenta el buscador del selector de iconos del editor.
 export const LINK_ICONS = [
-  { value: 'link', label: 'Enlace' },
-  { value: 'globe', label: 'Sitio web' },
-  { value: 'whatsapp', label: 'WhatsApp' },
-  { value: 'star', label: 'Estrella' },
-  { value: 'maps', label: 'Ubicación' },
-  { value: 'map', label: 'Mapa' },
-  { value: 'menu', label: 'Menú' },
-  { value: 'contact', label: 'Contacto' },
-  { value: 'instagram', label: 'Instagram' },
-  { value: 'tiktok', label: 'TikTok' },
-  { value: 'facebook', label: 'Facebook' },
-  { value: 'linkedin', label: 'LinkedIn' },
-  { value: 'bank', label: 'Banco' },
-  { value: 'share', label: 'Compartir' },
+  { value: 'link', label: 'Enlace', keywords: 'url web vinculo' },
+  { value: 'globe', label: 'Sitio web', keywords: 'pagina internet www' },
+  { value: 'whatsapp', label: 'WhatsApp', keywords: 'chat mensaje wa' },
+  { value: 'phone', label: 'Teléfono', keywords: 'llamar celular movil' },
+  { value: 'email', label: 'Correo', keywords: 'email mail contacto' },
+  { value: 'star', label: 'Estrella', keywords: 'reseña favorito calificacion' },
+  { value: 'maps', label: 'Ubicación', keywords: 'direccion pin lugar' },
+  { value: 'map', label: 'Mapa', keywords: 'ruta como llegar' },
+  { value: 'menu', label: 'Menú', keywords: 'carta lista catalogo' },
+  { value: 'food', label: 'Comida', keywords: 'restaurante cubiertos plato' },
+  { value: 'cart', label: 'Tienda', keywords: 'compra carrito shop pedido' },
+  { value: 'tag', label: 'Oferta', keywords: 'precio descuento promo cupon' },
+  { value: 'gift', label: 'Regalo', keywords: 'sorteo premio' },
+  { value: 'ticket', label: 'Entradas', keywords: 'evento boleto' },
+  { value: 'calendar', label: 'Reservas', keywords: 'cita agenda fecha turno' },
+  { value: 'clock', label: 'Horario', keywords: 'hora abierto' },
+  { value: 'truck', label: 'Delivery', keywords: 'envio domicilio entrega' },
+  { value: 'scissors', label: 'Peluquería', keywords: 'barberia corte salon' },
+  { value: 'heart', label: 'Favorito', keywords: 'me gusta amor donar' },
+  { value: 'image', label: 'Galería', keywords: 'fotos imagenes portafolio' },
+  { value: 'camera', label: 'Fotos', keywords: 'camara foto' },
+  { value: 'video', label: 'Video', keywords: 'pelicula clip' },
+  { value: 'music', label: 'Música', keywords: 'cancion audio' },
+  { value: 'contact', label: 'Contacto', keywords: 'persona vcard' },
+  { value: 'instagram', label: 'Instagram', keywords: 'ig red social' },
+  { value: 'tiktok', label: 'TikTok', keywords: 'red social video' },
+  { value: 'facebook', label: 'Facebook', keywords: 'fb red social' },
+  { value: 'youtube', label: 'YouTube', keywords: 'video canal' },
+  { value: 'x', label: 'X (Twitter)', keywords: 'twitter red social' },
+  { value: 'threads', label: 'Threads', keywords: 'red social' },
+  { value: 'pinterest', label: 'Pinterest', keywords: 'red social ideas' },
+  { value: 'telegram', label: 'Telegram', keywords: 'chat mensaje' },
+  { value: 'spotify', label: 'Spotify', keywords: 'musica podcast' },
+  { value: 'linkedin', label: 'LinkedIn', keywords: 'trabajo red profesional' },
+  { value: 'bank', label: 'Banco', keywords: 'pago transferencia' },
+  { value: 'share', label: 'Compartir', keywords: 'enviar' },
 ]
 
 // Normaliza el nombre del icono de un enlace; cadena vacía si no es válido.

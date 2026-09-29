@@ -1,20 +1,23 @@
 import { useMemo, useState } from 'react'
 import { ACTION_DEFINITIONS, getActionSettings } from '../utils/links.js'
-import { uploadMedia } from '../utils/api.js'
 import { Icon } from './Icons.jsx'
 import ButtonColorFields from './ButtonColorFields.jsx'
 import AnimationSelector from './AnimationSelector.jsx'
-import { FileButton, IconButton, Toggle } from './admin/ui.jsx'
+import { IconButton, Toggle } from './admin/ui.jsx'
 import { BANK_SECTION_ID, getProfileSections } from '../utils/banking.js'
 import LayoutSelector from './LayoutSelector.jsx'
+import ImageUploadButton from './admin/ImageUploadButton.jsx'
+import { CROP_PRESETS } from '../utils/image.js'
+import { FLASH_CLASS, editorItemId, useEditorFocus } from './admin/useEditorFocus.js'
 
-export default function ActionManager({ business, onChange }) {
+export default function ActionManager({ business, onChange, focus, onFocusItem }) {
   const [open, setOpen] = useState('whatsapp')
   const [dragged, setDragged] = useState('')
   const [uploading, setUploading] = useState('')
   const settings = useMemo(() => getActionSettings(business), [business.actionSettings])
   const definitions = new Map(ACTION_DEFINITIONS.map((item) => [item.type, item]))
   const sections = getProfileSections(business)
+  const flash = useEditorFocus(focus, (key) => (definitions.has(key) ? key : ''), setOpen)
 
   function commit(next) {
     onChange({ actionSettings: next.map((item, order) => ({ ...item, order })) })
@@ -22,6 +25,19 @@ export default function ActionManager({ business, onChange }) {
 
   function patch(type, update) {
     commit(settings.map((item) => item.type === type ? { ...item, ...update } : item))
+    onFocusItem?.(type)
+  }
+
+  // Para callbacks asíncronos (subidas): aplica el cambio sobre el estado más
+  // reciente del editor, no sobre el de cuando empezó la subida.
+  function patchLatest(type, update) {
+    onChange((prev) => ({ actionSettings: getActionSettings(prev).map((item, order) => ({ ...item, order, ...(item.type === type ? update : {}) })) }))
+  }
+
+  function toggle(type) {
+    const next = open === type ? '' : type
+    setOpen(next)
+    onFocusItem?.(next)
   }
 
   function move(type, direction) {
@@ -42,19 +58,6 @@ export default function ActionManager({ business, onChange }) {
     next.splice(to, 0, item)
     commit(next)
     setDragged('')
-  }
-
-  async function uploadThumbnail(type, event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setUploading(type)
-    try {
-      const { url } = await uploadMedia(file, business.slug || business.name || 'general', 'thumbnail')
-      patch(type, { thumbnail: url })
-    } finally {
-      setUploading('')
-      event.target.value = ''
-    }
   }
 
   function addSection() {
@@ -87,18 +90,19 @@ export default function ActionManager({ business, onChange }) {
           return (
             <div
               key={item.type}
+              id={editorItemId(item.type)}
               draggable
               onDragStart={() => setDragged(item.type)}
               onDragOver={(event) => event.preventDefault()}
               onDrop={() => drop(item.type)}
-              className={`overflow-hidden rounded-xl border bg-gray-900/70 ${dragged === item.type ? 'border-clickclick-orange opacity-60' : 'border-gray-700'}`}
+              className={`scroll-mt-40 overflow-hidden rounded-xl border bg-gray-900/70 transition-shadow ${dragged === item.type ? 'border-clickclick-orange opacity-60' : 'border-gray-700'} ${flash === item.type ? FLASH_CLASS : ''}`}
             >
               <div className="flex items-center gap-2 p-3">
                 <span className="cursor-grab text-gray-600 hover:text-gray-400" title="Arrastrar para ordenar"><Icon name="grip" size={16} /></span>
                 <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-800 text-clickclick-orange"><Icon name={definition.icon} size={19} /></span>
-                <button type="button" onClick={() => setOpen(open === item.type ? '' : item.type)} className="min-w-0 flex-1 text-left">
+                <button type="button" onClick={() => toggle(item.type)} aria-expanded={open === item.type} className="min-w-0 flex-1 text-left">
                   <span className="block truncate text-sm font-medium">{item.label || definition.label}</span>
-                  <span className={`text-[11px] ${configured ? 'text-emerald-400' : 'text-gray-500'}`}>{configured ? 'Configurado' : 'Falta configurar destino'}</span>
+                  <span className={`text-[11px] ${configured ? 'text-emerald-400' : item.enabled !== false ? 'text-amber-300' : 'text-gray-500'}`}>{configured ? 'Configurado' : 'Falta configurar destino'}</span>
                 </button>
                 <IconButton icon="chevron-up" label="Subir" onClick={() => move(item.type, -1)} disabled={index === 0} />
                 <IconButton icon="chevron-down" label="Bajar" onClick={() => move(item.type, 1)} disabled={index === settings.length - 1} />
@@ -112,15 +116,22 @@ export default function ActionManager({ business, onChange }) {
                   </label>
                   <LayoutSelector value={item.layout} onChange={(layout) => patch(item.type, { layout })} />
                   <div className="mt-3">
-                    <AnimationSelector value={item.animation} onChange={(animation) => patch(item.type, { animation })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white" />
+                    <AnimationSelector value={item.animation} business={business} primary={item.type === 'whatsapp'} onChange={(animation) => patch(item.type, { animation })} />
                   </div>
                   <ButtonColorFields business={business} action={{ ...item, primary: item.type === 'whatsapp' }} onChange={(colors) => patch(item.type, { colors })} />
                   <label className="mt-3 flex flex-col gap-1 text-xs text-gray-400">Sección
                     <select value={item.sectionId || ''} onChange={(event) => patch(item.type, { sectionId: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white"><option value="">Sin sección</option>{sections.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}</select>
                   </label>
                   <div className="mt-3 flex items-center gap-3">
-                    {item.thumbnail && <img src={item.thumbnail} alt="Miniatura" className="h-14 w-14 rounded-lg object-cover" />}
-                    <FileButton label={item.thumbnail ? 'Cambiar miniatura' : 'Agregar miniatura'} busy={uploading === item.type} accept="image/png,image/jpeg,image/webp,image/gif" onFile={(event) => uploadThumbnail(item.type, event)} />
+                    {item.thumbnail && <img src={item.thumbnail} alt="Miniatura" className={`h-14 rounded-lg object-cover ${item.layout === 'featured' ? 'w-24' : 'w-14'}`} />}
+                    <ImageUploadButton
+                      label={item.thumbnail ? 'Cambiar miniatura' : 'Agregar miniatura'}
+                      preset={item.layout === 'featured' ? CROP_PRESETS.thumbWide : CROP_PRESETS.thumbSquare}
+                      slug={business.slug || business.name}
+                      onBusyChange={(busy) => setUploading(busy ? item.type : '')}
+                      disabled={Boolean(uploading) && uploading !== item.type}
+                      onUploaded={(thumbnail) => patchLatest(item.type, { thumbnail })}
+                    />
                     {item.thumbnail && <button type="button" onClick={() => patch(item.type, { thumbnail: '' })} className="text-xs text-gray-400 hover:text-white">Quitar</button>}
                   </div>
                 </div>

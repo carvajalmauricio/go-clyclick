@@ -1,8 +1,8 @@
-import { resolveTheme } from '../utils/themes.js'
+import { profileThemeId, resolveTheme } from '../utils/themes.js'
 import { getButtonColors, normalizeButtonColors } from '../utils/buttonColors.js'
 
 export default function ButtonColorFields({ business, action, onChange }) {
-  const theme = resolveTheme(business.theme, business.customColors)
+  const theme = resolveTheme(profileThemeId(business), business.customColors)
   const colors = normalizeButtonColors(action.colors)
   const effective = getButtonColors(action, theme, business.buttonStyle)
   return (

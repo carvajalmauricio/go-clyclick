@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react'
 import { Icon } from './Icons.jsx'
 import { generatePngDataUrl, downloadDataUrl, profileUrl } from '../utils/qrGenerator.js'
 import { copyText, shareLink } from '../utils/clipboard.js'
+import { cardTextColor } from '../utils/themes.js'
+import ProfileSheet, { SheetButton } from './ProfileSheet.jsx'
 
-export default function ShareMenu({ business, theme, compact = false }) {
+export default function ShareMenu({ business, theme, compact = false, className = '' }) {
   const [open, setOpen] = useState(false)
   const [copied, setCopied] = useState(false)
   const [qr, setQr] = useState('')
@@ -38,59 +40,53 @@ export default function ShareMenu({ business, theme, compact = false }) {
         type="button"
         onClick={() => setOpen(true)}
         aria-label="Compartir perfil"
-        className={`absolute z-20 flex items-center justify-center rounded-full backdrop-blur-md transition hover:scale-105 ${compact ? 'right-3 top-3 h-9 w-9' : 'right-5 top-5 h-11 w-11'}`}
-        style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, color: theme.cardText || theme.text, border: `1px solid ${theme.border}` }}
+        data-preview-ignore
+        className={`profile-press absolute z-20 flex items-center justify-center rounded-full backdrop-blur-md ${compact ? 'right-3 top-3 h-9 w-9' : 'right-5 top-5 h-11 w-11'} ${className}`}
+        style={{ background: `color-mix(in srgb, ${theme.card} 87%, transparent)`, color: cardTextColor(theme), border: `1px solid ${theme.border}` }}
       >
         <Icon name="share" size={compact ? 17 : 20} />
       </button>
 
       {open && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/60 p-4 sm:items-center" onClick={() => setOpen(false)}>
-          <div
-            className="w-full max-w-sm rounded-[1.75rem] bg-white p-5 text-gray-900 shadow-2xl"
-            onClick={(event) => event.stopPropagation()}
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-lg font-bold">Compartir {business.name}</h2>
-                <p className="mt-1 text-xs text-gray-500">Escanea, copia o envía este perfil.</p>
+        <ProfileSheet
+          theme={theme}
+          title={`Compartir ${business.name || 'perfil'}`}
+          subtitle="Escanea, copia o envía este perfil."
+          closeLabel="Cerrar compartir"
+          onClose={() => setOpen(false)}
+        >
+          {(colors) => (
+            <>
+              {/* El QR se mantiene en blanco y negro para que siempre se pueda escanear. */}
+              <div className="mx-auto mt-2 w-48 rounded-2xl bg-white p-3 shadow-sm" style={{ border: `1px solid ${colors.border}` }}>
+                {qr ? <img src={qr} alt={`QR de ${business.name}`} width={168} height={168} className="h-full w-full" /> : <div className="aspect-square animate-pulse rounded-xl bg-gray-100" />}
               </div>
-              <button type="button" onClick={() => setOpen(false)} className="h-9 w-9 rounded-full bg-gray-100 text-xl">&times;</button>
-            </div>
 
-            <div className="mx-auto mt-5 w-48 rounded-2xl border border-gray-200 bg-white p-3">
-              {qr ? <img src={qr} alt={`QR de ${business.name}`} className="h-full w-full" /> : <div className="aspect-square animate-pulse rounded-xl bg-gray-100" />}
-            </div>
-
-            {qrError && <p role="alert" className="mt-3 text-sm text-red-700">{qrError} <button type="button" className="underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
-            <button type="button" onClick={copy} className="mt-5 flex w-full items-center justify-center gap-2 rounded-xl bg-gray-900 px-4 py-3 font-semibold text-white">
-              <Icon name="copy" size={18} /> {copied ? 'Enlace copiado' : 'Copiar enlace'}
-            </button>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <a
-                href={`https://wa.me/?text=${encodeURIComponent(`${business.name} ${url}`)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-3 font-semibold text-white"
-              >
-                <Icon name="whatsapp" size={18} /> WhatsApp
-              </a>
-              <button
-                type="button"
-                disabled={!qr}
-                onClick={() => qr && downloadDataUrl(qr, `qr-${business.slug}.png`)}
-                className="rounded-xl border border-gray-200 px-3 py-3 font-semibold disabled:opacity-40"
-              >
-                Descargar QR
-              </button>
-              {'share' in navigator && (
-                <button type="button" onClick={share} className="col-span-2 flex items-center justify-center gap-2 rounded-xl border border-gray-200 px-3 py-3 font-semibold">
-                  <Icon name="share" size={18} /> Más opciones para compartir
-                </button>
-              )}
-            </div>
-          </div>
-        </div>
+              {qrError && <p role="alert" className="mt-3 text-center text-sm">{qrError} <button type="button" className="underline" onClick={() => setRetry((value) => value + 1)}>Reintentar</button></p>}
+              <SheetButton colors={colors} onClick={copy} className="mt-5">
+                <Icon name="copy" size={18} /> {copied ? 'Enlace copiado' : 'Copiar enlace'}
+              </SheetButton>
+              <div className="mt-3 grid grid-cols-2 gap-3">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(`${business.name} ${url}`)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="profile-press flex items-center justify-center gap-2 rounded-xl bg-[#25D366] px-3 py-3 text-sm font-semibold text-white"
+                >
+                  <Icon name="whatsapp" size={18} /> WhatsApp
+                </a>
+                <SheetButton colors={colors} variant="secondary" disabled={!qr} onClick={() => qr && downloadDataUrl(qr, `qr-${business.slug}.png`)}>
+                  Descargar QR
+                </SheetButton>
+                {typeof navigator !== 'undefined' && 'share' in navigator && (
+                  <SheetButton colors={colors} variant="secondary" onClick={share} className="col-span-2">
+                    <Icon name="share" size={18} /> Más opciones para compartir
+                  </SheetButton>
+                )}
+              </div>
+            </>
+          )}
+        </ProfileSheet>
       )}
     </>
   )

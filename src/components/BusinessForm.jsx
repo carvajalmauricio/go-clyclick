@@ -4,10 +4,14 @@ import ActionManager from './ActionManager.jsx'
 import CustomLinksManager from './CustomLinksManager.jsx'
 import BankAccountManager from './BankAccountManager.jsx'
 import HeroSlidesManager from './HeroSlidesManager.jsx'
-import { uploadLogo } from '../utils/api.js'
+import { Icon } from './Icons.jsx'
 import { resolveTheme, THEME_LIST } from '../utils/themes.js'
 import { getActionSettings, buildSocials, SOCIAL_NETWORKS, SOCIAL_POSITIONS, normalizeSocialPosition, normalizeSocialOrder } from '../utils/links.js'
-import { Field, FileButton, IconButton, SectionCard, SubHeading, Toggle, inputCls } from './admin/ui.jsx'
+import { Field, IconButton, SectionCard, Segmented, SubHeading, Toggle, inputCls } from './admin/ui.jsx'
+import ImageUploadButton from './admin/ImageUploadButton.jsx'
+import { CROP_PRESETS } from '../utils/image.js'
+import { HEADER_ALIGNS, LOGO_SHAPES, LOGO_SIZES, logoRadius, normalizeHeader } from '../utils/header.js'
+import { getSectionIssues } from '../utils/sectionIssues.js'
 import { FONTS } from '../utils/fonts.js'
 
 // Secciones del formulario. El editor las usa también para la navegación rápida.
@@ -23,11 +27,17 @@ export const FORM_SECTIONS = [
 // Formulario controlado de configuración de negocio.
 // `value` es el objeto negocio; `onChange(patch)` aplica cambios parciales.
 // `openSections` (Set) y `onToggleSection(id)` controlan qué tarjetas están abiertas.
-export default function BusinessForm({ value, onChange, isEdit, openSections, onToggleSection }) {
+// `focus` ({ key, nonce }) abre y resalta un botón concreto (clic en el preview)
+// y `onFocusItem(key)` avisa qué botón se está editando para resaltarlo allí.
+export default function BusinessForm({ value, onChange, isEdit, openSections, onToggleSection, focus, onFocusItem }) {
   const b = value
   const theme = resolveTheme(b.theme, b.customColors)
-  const [uploading, setUploading] = useState(false)
-  const [uploadError, setUploadError] = useState('')
+  const [uploading, setUploading] = useState('')
+  const header = normalizeHeader(b.header)
+  const setHeader = (update) => onChange({ header: { ...header, ...update } })
+  const logoPreset = { ...CROP_PRESETS.logo, shape: header.logoShape === 'circle' ? 'circle' : 'rect' }
+  const uploadSlug = b.slug || b.name || 'general'
+  const issues = getSectionIssues(b)
 
   const set = (field) => (e) => onChange({ [field]: e.target.value })
   const setSocial = (field) => (e) =>
@@ -48,23 +58,6 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
     onChange({ socialOrder: normalizeSocialOrder(keys) })
   }
 
-  async function onLogoFile(e) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    setUploadError('')
-    setUploading(true)
-    try {
-      const slug = b.slug || b.name || 'general'
-      const { url } = await uploadLogo(file, slug)
-      onChange({ logo: url })
-    } catch (err) {
-      setUploadError(err.message)
-    } finally {
-      setUploading(false)
-      e.target.value = '' // permite volver a subir el mismo archivo
-    }
-  }
-
   const summaries = getSummaries(b)
   const card = (id) => {
     const meta = FORM_SECTIONS.find((section) => section.id === id)
@@ -76,6 +69,7 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
       summary: summaries[id],
       open: openSections.has(id),
       onToggle: () => onToggleSection(id),
+      issues: issues[id],
     }
   }
 
@@ -84,8 +78,8 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
       <SectionCard {...card('basic')}>
         <div className="flex items-center gap-4 rounded-xl border border-gray-800 bg-gray-950/40 p-3">
           <div
-            className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-full border-2 bg-gray-800"
-            style={{ borderColor: theme.accent }}
+            className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden border-2 bg-gray-800"
+            style={{ borderColor: theme.accent, borderRadius: logoRadius(header.logoShape, 64) }}
           >
             {b.logo ? (
               <img src={b.logo} alt="Logo" className="h-full w-full object-cover" />
@@ -95,21 +89,54 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
           </div>
           <div className="min-w-0 flex-1">
             <p className="text-xs font-medium text-gray-300">Logo del negocio</p>
-            <p className="mb-2 text-[11px] text-gray-500">PNG, JPG, WEBP, SVG o GIF. Ideal cuadrado.</p>
+            <p className="mb-2 text-[11px] text-gray-500">PNG, JPG o WEBP se recortan y comprimen antes de subir. SVG y GIF se suben tal cual.</p>
             <div className="flex flex-wrap items-center gap-2">
-              <FileButton
+              <ImageUploadButton
                 label={b.logo ? 'Cambiar logo' : 'Subir logo'}
-                busy={uploading}
+                preset={logoPreset}
+                slug={uploadSlug}
                 accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
-                onFile={onLogoFile}
+                disabled={Boolean(uploading) && uploading !== 'logo'}
+                onBusyChange={(busy) => setUploading(busy ? 'logo' : '')}
+                onUploaded={(logo) => onChange({ logo })}
               />
-              {b.logo && !uploading && (
+              {b.logo && uploading !== 'logo' && (
                 <button type="button" onClick={() => onChange({ logo: '' })} className="px-2 text-xs text-gray-400 hover:text-white">
                   Quitar
                 </button>
               )}
             </div>
-            {uploadError && <p role="alert" className="mt-1 text-xs text-red-400">{uploadError}</p>}
+          </div>
+        </div>
+
+        {/* #7 Cabecera: portada, forma y tamaño del logo y alineación */}
+        <div className="rounded-xl border border-gray-800 bg-gray-950/40 p-3">
+          <p className="text-xs font-medium text-gray-300">Cabecera del perfil</p>
+          <div className="mt-2 flex items-center gap-3">
+            <div className="flex h-14 w-32 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-dashed border-gray-700 bg-gray-800 text-gray-500">
+              {header.cover ? <img src={header.cover} alt="Portada" className="h-full w-full object-cover" /> : <Icon name="image" size={18} />}
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="mb-2 text-[11px] text-gray-500">Imagen de portada opcional (3:1). El logo se superpone sobre ella.</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <ImageUploadButton
+                  label={header.cover ? 'Cambiar portada' : 'Subir portada'}
+                  preset={CROP_PRESETS.cover}
+                  slug={uploadSlug}
+                  disabled={Boolean(uploading) && uploading !== 'cover'}
+                  onBusyChange={(busy) => setUploading(busy ? 'cover' : '')}
+                  onUploaded={(cover) => onChange((prev) => ({ header: { ...normalizeHeader(prev.header), cover } }))}
+                />
+                {header.cover && uploading !== 'cover' && <button type="button" onClick={() => setHeader({ cover: '' })} className="px-2 text-xs text-gray-400 hover:text-white">Quitar</button>}
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 grid gap-3 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <Segmented label="Forma del logo" value={header.logoShape} options={LOGO_SHAPES} onChange={(logoShape) => setHeader({ logoShape })} renderIcon={(option) => <span aria-hidden="true" className="h-3 w-3 border-[1.5px] border-current" style={{ borderRadius: logoRadius(option.value, 12) }} />} />
+            </div>
+            <Segmented label="Tamaño del logo" value={header.logoSize} options={LOGO_SIZES} onChange={(logoSize) => setHeader({ logoSize })} />
+            <Segmented label="Alineación" value={header.align} options={HEADER_ALIGNS} onChange={(align) => setHeader({ align })} />
           </div>
         </div>
 
@@ -186,13 +213,13 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
           </Field>
         </div>
         <SubHeading>Orden y presentación</SubHeading>
-        <ActionManager business={b} onChange={onChange} />
+        <ActionManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
         <SubHeading>Enlaces personalizados</SubHeading>
-        <CustomLinksManager business={b} onChange={onChange} />
+        <CustomLinksManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
       </SectionCard>
 
       <SectionCard {...card('bank')}>
-        <BankAccountManager business={b} onChange={onChange} />
+        <BankAccountManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
       </SectionCard>
 
       <SectionCard {...card('contact')}>
