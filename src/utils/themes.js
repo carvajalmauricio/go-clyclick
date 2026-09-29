@@ -73,6 +73,8 @@ export const THEMES = {
     accent: '#f8fafc',
     accentText: '#1e3a5f',
     card: 'rgba(239,246,255,.9)',
+    // Texto sobre las tarjetas claras (el texto general es blanco).
+    cardText: '#1e3a5f',
     border: 'rgba(255,255,255,.45)',
   },
   grid: {
@@ -86,6 +88,7 @@ export const THEMES = {
     accent: '#fff1dc',
     accentText: '#3f2027',
     card: 'rgba(255,241,220,.92)',
+    cardText: '#3f2027',
     border: 'rgba(255,255,255,.35)',
   },
   aurora: {
@@ -128,6 +131,49 @@ export const THEMES = {
     card: '#ffffff',
     border: '#e7e5e4',
   },
+  // --- Recreaciones de temas populares de Linktree ---------------------------
+  // Confetti: confeti pastel cayendo y botones semiopacos que dejan ver el efecto.
+  confetti: {
+    id: 'confetti',
+    name: 'Confetti',
+    bg: '#fdf2f8',
+    bgGradient: 'linear-gradient(170deg, #fff1f2 0%, #f5f3ff 52%, #ecfeff 100%)',
+    pattern: 'confetti',
+    text: '#1f2937',
+    subtext: '#4b5563',
+    accent: '#db2777',
+    accentText: '#ffffff',
+    card: 'rgba(255,255,255,.72)',
+    border: 'rgba(219,39,119,.22)',
+  },
+  // Rainbow: degradado arcoíris que cambia de tono y botones blancos sólidos.
+  rainbow: {
+    id: 'rainbow',
+    name: 'Rainbow',
+    bg: '#e4c1f9',
+    bgGradient: 'linear-gradient(135deg, #ffd1dc 0%, #ffe7a3 25%, #c8f7c5 50%, #bde0fe 75%, #e4c1f9 100%)',
+    pattern: 'rainbow',
+    text: '#1e1b2e',
+    subtext: '#3f3a56',
+    accent: '#1e1b2e',
+    accentText: '#ffffff',
+    card: '#ffffff',
+    border: 'rgba(255,255,255,.95)',
+  },
+  // Starry Night: cielo nocturno con partículas que suben y titilan.
+  starry: {
+    id: 'starry',
+    name: 'Starry Night',
+    bg: '#0b0a24',
+    bgGradient: 'linear-gradient(180deg, #0b0a24 0%, #1e1b4b 62%, #3b0764 100%)',
+    pattern: 'stars',
+    text: '#f5f3ff',
+    subtext: '#c4b5fd',
+    accent: '#f472b6',
+    accentText: '#1e0b2e',
+    card: 'rgba(30,27,75,.66)',
+    border: 'rgba(196,181,253,.35)',
+  },
 }
 
 // Ids de tema por defecto usados por el modo claro/oscuro automático (#16).
@@ -145,6 +191,9 @@ export const BACKGROUND_PATTERNS = [
   { value: 'glow', label: 'Luces' },
   { value: 'waves', label: 'Ondas' },
   { value: 'geo', label: 'Geométrico' },
+  { value: 'confetti', label: 'Confeti' },
+  { value: 'rainbow', label: 'Arcoíris' },
+  { value: 'stars', label: 'Estrellas' },
 ]
 
 // Devuelve un tema por id, con soporte para tema personalizado.
@@ -199,6 +248,12 @@ export function getBackgroundStyle(theme, background) {
     }
   }
   return style
+}
+
+// Color de texto legible sobre theme.card. Algunos temas usan tarjetas claras
+// sobre un fondo oscuro (texto general blanco) y definen `cardText`.
+export function cardTextColor(theme) {
+  return theme.cardText || theme.text
 }
 
 // Determina si un color hex es "claro" (para elegir texto oscuro sobre él).

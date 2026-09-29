@@ -65,6 +65,13 @@ puedes cambiar su título o asignar las cuentas a otra sección.
 - Puedes ordenar, ocultar y eliminar cuentas, con un máximo de 30 por negocio.
 - En la personalización de cada acción o cuenta puedes elegir **Fondo**, **Texto** y **Borde**,
   o volver a **Usar colores del tema**. Se aplica tanto al preview como al perfil público.
+- **Presentación** de cada botón: *Clásico*, *Destacado*, *Cuadrícula 2 col* (los consecutivos se
+  muestran de 2 en 2) y *Solo icono* (los consecutivos forman una fila). En tarjetas altas las
+  formas Píldora/Hoja/Burbuja usan un radio adaptado para no recortar imagen ni título.
+- Temas inspirados en Linktree: **Confetti**, **Rainbow** y **Starry Night** (con animación que se
+  desactiva si el visitante pide movimiento reducido).
+- La vista previa del editor renderiza el perfil a tamaño real de móvil (390×844) y lo escala,
+  por lo que tamaños y saltos de línea coinciden con la página pública.
 - Las animaciones disponibles son **Pulso** (tamaño), **Flotar** (desplazamiento vertical),
   **Brillo** (luz en el contorno) y **Ninguna**. Con movimiento reducido mantienen su efecto
   propio con menor intensidad y velocidad.

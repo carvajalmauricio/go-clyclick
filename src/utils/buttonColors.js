@@ -1,3 +1,5 @@
+import { cardTextColor } from './themes.js'
+
 export function normalizeButtonColors(colors) {
   const result = {}
   for (const key of ['background', 'text', 'border']) {
@@ -12,7 +14,7 @@ export function normalizeButtonColors(colors) {
 export function getButtonColors(action, theme, style = {}) {
   const custom = normalizeButtonColors(action.colors)
   const base = action.primary ? theme.accent : theme.card
-  const baseText = action.primary ? theme.accentText : theme.text
+  const baseText = action.primary ? theme.accentText : cardTextColor(theme)
 
   switch (style.variant) {
     case 'outline':
@@ -22,8 +24,10 @@ export function getButtonColors(action, theme, style = {}) {
         border: custom.border || theme.text,
       }
     case 'glass':
+      // El cristal se tiñe con el color base del botón (acento en el
+      // principal), para que su texto (accentText o cardText) siempre contraste.
       return {
-        background: custom.background || `color-mix(in srgb, ${theme.card} 73%, transparent)`,
+        background: custom.background || `color-mix(in srgb, ${base} ${action.primary ? 82 : 73}%, transparent)`,
         text: custom.text || baseText,
         border: custom.border || theme.border,
       }

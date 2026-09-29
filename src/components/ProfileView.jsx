@@ -73,7 +73,10 @@ function useProfileFont(fontValue) {
 
 // Vista de presentación del perfil de un negocio.
 // Se usa en la página pública y dentro del simulador móvil del admin.
-export default function ProfileView({ business: rawBusiness, compact = false }) {
+// `embedded` renderiza el perfil a tamaño real dentro de un marco (el
+// simulador del admin): mismas medidas que la página pública, pero ocupando la
+// altura del marco en lugar de la de la ventana.
+export default function ProfileView({ business: rawBusiness, compact = false, embedded = false }) {
   const langs = enabledLanguages(rawBusiness)
   const [lang, setLang] = useState('es')
   const activeLang = langs.includes(lang) ? lang : 'es'
@@ -106,7 +109,7 @@ export default function ProfileView({ business: rawBusiness, compact = false }) 
 
   return (
     <div
-      className={`${compact ? 'min-h-full' : 'min-h-screen'} profile-background relative w-full flex flex-col items-center overflow-hidden`}
+      className={`${compact || embedded ? 'min-h-full' : 'min-h-screen'} profile-background relative w-full flex flex-col items-center overflow-hidden`}
       style={{ ...getBackgroundStyle(theme, ['image', 'video'].includes(background.type) ? null : background), color: theme.text, ...(font ? { fontFamily: font.family } : {}) }}
     >
       {langs.length > 1 && (
@@ -125,7 +128,7 @@ export default function ProfileView({ business: rawBusiness, compact = false }) 
               className="rounded-full px-2.5 py-1 text-xs font-semibold transition"
               style={activeLang === code
                 ? { background: theme.accent, color: theme.accentText }
-                : { color: theme.text, opacity: 0.7 }}
+                : { color: theme.cardText || theme.text, opacity: 0.7 }}
             >
               {LANGUAGE_LABELS[code] || code.toUpperCase()}
             </button>
@@ -196,7 +199,7 @@ function ContactCopyRow({ business, theme }) {
   if (!phone && !address) return null
   const chipStyle = {
     background: `color-mix(in srgb, ${theme.card} 82%, transparent)`,
-    color: theme.text,
+    color: theme.cardText || theme.text,
     border: `1px solid ${theme.border}`,
   }
   return (
@@ -227,23 +230,21 @@ function ContactCopyRow({ business, theme }) {
 
 function ActionGroup({ actions, business, theme, lang = 'es' }) {
   if (!actions.length) return null
-  // Agrupa acciones consecutivas con layout 'grid' dentro de una cuadrícula de
-  // 2 columnas; el resto (classic/featured/icon) mantiene el flujo apilado.
-  const chunks = []
-  for (const action of actions) {
-    const isGrid = action.layout === 'grid'
-    const last = chunks[chunks.length - 1]
-    if (isGrid && last?.grid) {
-      last.items.push(action)
-    } else {
-      chunks.push({ grid: isGrid, items: [action] })
-    }
-  }
+  // Agrupa acciones consecutivas del mismo layout agrupable: 'grid' forma una
+  // cuadrícula de 2 columnas y 'icon' una fila centrada de iconos (como la fila
+  // de iconos de Linktree). Classic y featured mantienen el flujo apilado.
+  const chunks = groupActions(actions)
   return (
     <div className="flex w-full flex-col gap-3">
       {chunks.map((chunk, index) =>
-        chunk.grid ? (
-          <div key={`grid-${index}`} className="grid grid-cols-2 gap-3">
+        chunk.kind === 'grid' ? (
+          <div key={`grid-${index}`} className="grid grid-cols-2 items-stretch gap-3">
+            {chunk.items.map((action) => (
+              <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} />
+            ))}
+          </div>
+        ) : chunk.kind === 'icon' ? (
+          <div key={`icon-${index}`} className="flex flex-wrap justify-center gap-3">
             {chunk.items.map((action) => (
               <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} />
             ))}
@@ -256,10 +257,23 @@ function ActionGroup({ actions, business, theme, lang = 'es' }) {
   )
 }
 
+// Agrupa acciones consecutivas con layout 'grid' o 'icon'.
+export function groupActions(actions) {
+  const chunks = []
+  for (const action of actions) {
+    const kind = action.layout === 'grid' || action.layout === 'icon' ? action.layout : 'single'
+    const last = chunks[chunks.length - 1]
+    if (kind !== 'single' && last?.kind === kind) last.items.push(action)
+    else chunks.push({ kind, items: [action] })
+  }
+  return chunks
+}
+
 function ActionCard({ action, business, theme, lang = 'es' }) {
   const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
-  const radius = buttonRadius(style.shape)
+  const layout = action.layout || 'classic'
+  const radius = buttonRadius(style.shape, layout)
   const colors = getButtonColors(action, theme, style)
   const background = colors.background
   const color = colors.text
@@ -268,34 +282,37 @@ function ActionCard({ action, business, theme, lang = 'es' }) {
   const animation = animationClass(action.animation)
   const innerAnimation = innerAnimationClass(action.animation)
   const cardStyle = { background, color, border, borderRadius: radius, boxShadow: shadow }
-
-  const layout = action.layout || 'classic'
+  // Fondo del área de imagen cuando no hay miniatura: un velo del color del
+  // texto del botón, que siempre contrasta con su fondo (incluso en temas con
+  // tarjetas claras sobre fondo oscuro o con colores personalizados).
+  const mediaBackground = `color-mix(in srgb, ${color} 9%, transparent)`
+  const pillLike = style.shape === 'pill'
 
   const content = layout === 'featured' ? (
     <>
       {action.thumbnail ? (
         <img src={action.thumbnail} alt={action.label || ''} className="aspect-video w-full object-cover" />
       ) : (
-        <div className="flex aspect-[2.4/1] w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
+        <div className="flex aspect-[2.4/1] w-full items-center justify-center" style={{ background: mediaBackground }}>
           <Icon name={action.icon} size={48} />
         </div>
       )}
-      <div className="flex items-center gap-3 px-4 py-3 font-semibold">
-        <Icon name={action.icon} size={21} />
-        <span className="flex-1 text-left">{action.label}</span>
-        <span aria-hidden="true">›</span>
+      <div className={`flex items-center gap-3 py-3 font-semibold ${pillLike ? 'px-5' : 'px-4'}`}>
+        {action.thumbnail && <Icon name={action.icon} size={21} />}
+        <span className="min-w-0 flex-1 break-words text-left">{action.label}</span>
+        <span aria-hidden="true" className="opacity-60">›</span>
       </div>
     </>
   ) : layout === 'grid' ? (
     <>
       {action.thumbnail ? (
-        <img src={action.thumbnail} alt={action.label || ''} className="aspect-square w-full object-cover" />
+        <img src={action.thumbnail} alt={action.label || ''} className="aspect-square w-full shrink-0 object-cover" />
       ) : (
-        <div className="flex aspect-square w-full items-center justify-center" style={{ background: `${theme.accent}22` }}>
+        <div className="flex aspect-square w-full shrink-0 items-center justify-center" style={{ background: mediaBackground }}>
           <Icon name={action.icon} size={40} />
         </div>
       )}
-      <span className="block px-3 py-2.5 text-center text-sm font-semibold">{action.label}</span>
+      <span className="flex flex-1 items-center justify-center break-words px-3 py-2.5 text-center text-sm font-semibold leading-snug">{action.label}</span>
     </>
   ) : layout === 'icon' ? (
     <Icon name={action.icon} size={24} />
@@ -311,19 +328,19 @@ function ActionCard({ action, business, theme, lang = 'es' }) {
   )
 
   const layoutClass = layout === 'featured'
-    ? 'block overflow-hidden'
+    ? 'block w-full overflow-hidden'
     : layout === 'grid'
-      ? 'block overflow-hidden'
+      ? 'flex h-full w-full flex-col overflow-hidden'
       : layout === 'icon'
-        ? 'mx-auto flex h-14 w-14 items-center justify-center'
-        : 'flex min-h-14 items-center gap-3 px-4 py-3'
+        ? 'flex h-14 w-14 items-center justify-center'
+        : `flex min-h-14 w-full items-center gap-3 py-3 ${pillLike ? 'px-6' : 'px-4'}`
   const needsAriaLabel = layout === 'icon'
-  const widthClass = layout === 'icon' ? '' : 'w-full'
-  const className = `${layoutClass} ${widthClass} font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
+  const className = `${layoutClass} font-medium backdrop-blur-sm motion-safe:transition-transform motion-safe:hover:scale-[1.015] ${innerAnimation}`
   // Separar la animación del efecto hover evita que ambos compitan por transform.
   const ariaLabel = needsAriaLabel ? action.label : undefined
+  const wrapperClass = layout === 'icon' ? 'inline-flex' : layout === 'grid' ? 'h-full w-full' : 'w-full'
   return (
-    <div className={`relative ${layout === 'icon' ? 'inline-flex' : 'w-full'} ${animation}`} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
+    <div className={`relative ${wrapperClass} ${animation}`} title={needsAriaLabel ? action.label : undefined} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
       {action.bankAccount && !action.url ? (
         <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : action.isContact ? (

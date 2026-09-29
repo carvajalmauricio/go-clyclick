@@ -271,7 +271,7 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true }) {
         {slide.image ? (
           <img src={slide.image} alt={slide.title || business.name} draggable={false} className="w-full h-full object-cover" />
         ) : (
-          <span style={{ color: theme.accent, fontSize: compact ? 30 : 38, fontWeight: 700 }}>{initials}</span>
+          <span style={{ color: theme.cardText || theme.accent, fontSize: compact ? 30 : 38, fontWeight: 700 }}>{initials}</span>
         )}
       </div>
 

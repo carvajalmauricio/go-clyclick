@@ -6,7 +6,7 @@ import ButtonColorFields from './ButtonColorFields.jsx'
 import AnimationSelector from './AnimationSelector.jsx'
 import { FileButton, IconButton, Toggle } from './admin/ui.jsx'
 import { BANK_SECTION_ID, getProfileSections } from '../utils/banking.js'
-import { BUTTON_LAYOUTS } from '../utils/buttonStyles.js'
+import LayoutSelector from './LayoutSelector.jsx'
 
 export default function ActionManager({ business, onChange }) {
   const [open, setOpen] = useState('whatsapp')
@@ -110,10 +110,8 @@ export default function ActionManager({ business, onChange }) {
                   <label className="flex flex-col gap-1 text-xs text-gray-400">Título visible
                     <input value={item.label || ''} onChange={(event) => patch(item.type, { label: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white" />
                   </label>
-                  <div className="mt-3 grid grid-cols-2 gap-3">
-                    <label className="flex flex-col gap-1 text-xs text-gray-400">Presentación
-                      <select value={item.layout || 'classic'} onChange={(event) => patch(item.type, { layout: event.target.value })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white">{BUTTON_LAYOUTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select>
-                    </label>
+                  <LayoutSelector value={item.layout} onChange={(layout) => patch(item.type, { layout })} />
+                  <div className="mt-3">
                     <AnimationSelector value={item.animation} onChange={(animation) => patch(item.type, { animation })} className="rounded-lg border border-gray-600 bg-gray-800 px-3 py-2 text-white" />
                   </div>
                   <ButtonColorFields business={business} action={{ ...item, primary: item.type === 'whatsapp' }} onChange={(colors) => patch(item.type, { colors })} />
