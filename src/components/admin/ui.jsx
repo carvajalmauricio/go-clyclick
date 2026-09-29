@@ -17,8 +17,11 @@ export function Field({ label, hint, children, className = '' }) {
 }
 
 // Tarjeta plegable del formulario. `summary` resume el contenido cuando está cerrada.
-export function SectionCard({ id, icon, title, description, summary, open, onToggle, children }) {
+// `issues` (#14): lista de { level, text } con lo que le falta a la sección.
+export function SectionCard({ id, icon, title, description, summary, open, onToggle, issues = [], children }) {
   const contentId = useId()
+  const error = issues.some((issue) => issue.level === 'error')
+  const pending = issues.filter((issue) => issue.level !== 'info')
   return (
     <section id={id} className="scroll-mt-40 overflow-hidden rounded-2xl border border-gray-800 bg-gray-900/60">
       <button
@@ -28,13 +31,23 @@ export function SectionCard({ id, icon, title, description, summary, open, onTog
         aria-controls={contentId}
         className="flex w-full items-center gap-3 px-4 py-4 text-left transition hover:bg-gray-800/40 sm:px-5"
       >
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clickclick-orange/10 text-clickclick-orange">
+        <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-clickclick-orange/10 text-clickclick-orange">
           <Icon name={icon} size={20} />
+          {pending.length === 0 && (
+            <span aria-hidden="true" className="absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full bg-emerald-500 text-gray-950"><Icon name="check" size={10} /></span>
+          )}
         </span>
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-semibold text-white">{title}</span>
           <span className="block truncate text-xs text-gray-400">{open ? description : summary || description}</span>
+          {issues.length > 0 && (
+            <span className={`mt-0.5 flex items-center gap-1 text-[11px] ${error ? 'text-red-400' : pending.length ? 'text-amber-300' : 'text-gray-500'}`}>
+              <Icon name="info" size={11} className="shrink-0" />
+              <span className="truncate">{issues.map((issue) => issue.text).join(' · ')}</span>
+            </span>
+          )}
         </span>
+        {pending.length > 0 && <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${error ? 'bg-red-500/15 text-red-300' : 'bg-amber-400/15 text-amber-300'}`} aria-label={`${pending.length} pendientes`}>{pending.length}</span>}
         <Icon name={open ? 'chevron-up' : 'chevron-down'} size={18} className="shrink-0 text-gray-500" />
       </button>
       {open && (
@@ -43,6 +56,30 @@ export function SectionCard({ id, icon, title, description, summary, open, onTog
         </div>
       )}
     </section>
+  )
+}
+
+// Control segmentado (opciones excluyentes con aspecto de botones).
+export function Segmented({ label, value, options, onChange, renderIcon }) {
+  return (
+    <div className="flex min-w-0 flex-col gap-1.5">
+      <span className="text-xs font-medium text-gray-300">{label}</span>
+      <div role="radiogroup" aria-label={label} className="flex rounded-lg border border-gray-700 bg-gray-900/60 p-0.5">
+        {options.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            role="radio"
+            aria-checked={value === option.value}
+            onClick={() => onChange(option.value)}
+            className={`flex flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition ${value === option.value ? 'bg-clickclick-orange/15 font-semibold text-clickclick-orange' : 'text-gray-400 hover:text-white'}`}
+          >
+            {renderIcon?.(option)}
+            {option.label}
+          </button>
+        ))}
+      </div>
+    </div>
   )
 }
 

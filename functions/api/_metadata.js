@@ -1,4 +1,5 @@
 import { fontStylesheetUrl } from '../../src/utils/fonts.js'
+import { themeColor } from '../../src/utils/themes.js'
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])
@@ -37,7 +38,11 @@ export function profileMetadata(business, origin) {
   // seleccionada, con display=swap. Si no hay, no se añade ningún <link>.
   const fontHref = fontStylesheetUrl(business.font)
   const fontLink = fontHref ? `<link rel="stylesheet" href="${escapeHtml(fontHref)}">` : ''
-  return { title, description, html: `${tags}<link rel="canonical" href="${escapeHtml(url)}">${fontLink}` }
+  // Color de la barra del navegador móvil según el tema (claro/oscuro si aplica).
+  const themeTags = business.autoTheme
+    ? `<meta name="theme-color" media="(prefers-color-scheme: light)" content="${escapeHtml(themeColor(business, false))}"><meta name="theme-color" media="(prefers-color-scheme: dark)" content="${escapeHtml(themeColor(business, true))}">`
+    : `<meta name="theme-color" content="${escapeHtml(themeColor(business))}">`
+  return { title, description, html: `${tags}${themeTags}<link rel="canonical" href="${escapeHtml(url)}">${fontLink}` }
 }
 
 export async function addProfileMetadata(response, request, env) {

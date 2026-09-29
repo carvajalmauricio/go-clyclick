@@ -250,6 +250,74 @@ export function getBackgroundStyle(theme, background) {
   return style
 }
 
+// Id del tema efectivo del perfil (respeta el modo claro/oscuro automático).
+export function profileThemeId(business, prefersDark = false) {
+  const b = business || {}
+  if (b.autoTheme) return prefersDark ? (b.darkTheme || DEFAULT_DARK_THEME) : (b.lightTheme || DEFAULT_LIGHT_THEME)
+  return b.theme
+}
+
+const HEX = /^#[0-9a-f]{6}$/i
+
+// Color de la parte superior del perfil, usado como `theme-color` para que la
+// barra del navegador móvil se funda con la página.
+export function themeColor(business, prefersDark = false) {
+  const b = business || {}
+  const theme = resolveTheme(profileThemeId(b, prefersDark), b.customColors)
+  const background = b.background || {}
+  if (background.type === 'solid' && HEX.test(background.color || '')) return background.color
+  if (background.type === 'gradient') {
+    // Con ángulo 0 (hacia arriba) el color final queda arriba.
+    const top = Number(background.angle ?? 160) === 0 ? background.color2 : background.color
+    if (HEX.test(top || '')) return top
+  }
+  const first = String(theme.bgGradient || '').match(/#[0-9a-f]{6}\b/i)?.[0]
+  return first || theme.bg
+}
+
+// --- Utilidades de color (hex y rgba) ---------------------------------------
+export function parseColor(value) {
+  const input = String(value || '').trim()
+  const hex = input.match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i)
+  if (hex) {
+    const full = hex[1].length === 3 ? hex[1].split('').map((x) => x + x).join('') : hex[1]
+    return { r: parseInt(full.slice(0, 2), 16), g: parseInt(full.slice(2, 4), 16), b: parseInt(full.slice(4, 6), 16), a: 1 }
+  }
+  const rgba = input.match(/^rgba?\(\s*([\d.]+)\s*,\s*([\d.]+)\s*,\s*([\d.]+)\s*(?:,\s*([\d.]+)\s*)?\)$/i)
+  if (rgba) return { r: Number(rgba[1]), g: Number(rgba[2]), b: Number(rgba[3]), a: rgba[4] === undefined ? 1 : Number(rgba[4]) }
+  return null
+}
+
+// Luminancia percibida (0-1) de un color hex o rgba mezclado sobre `under`.
+export function perceivedLuminance(value, under = '#000000') {
+  const color = parseColor(value)
+  const base = parseColor(under) || { r: 0, g: 0, b: 0, a: 1 }
+  if (!color) return 0
+  const mix = (channel) => color[channel] * color.a + base[channel] * (1 - color.a)
+  return (0.299 * mix('r') + 0.587 * mix('g') + 0.114 * mix('b')) / 255
+}
+
+// Colores de las ventanas del perfil (Compartir, datos bancarios): superficie
+// opaca con el color de las tarjetas del tema y un botón principal que siempre
+// contrasta con esa superficie.
+export function sheetColors(theme) {
+  const surfaceLight = perceivedLuminance(theme.card, theme.bg) > 0.6
+  const text = cardTextColor(theme)
+  const accentLight = perceivedLuminance(theme.accent) > 0.6
+  const primary = accentLight !== surfaceLight
+    ? { background: theme.accent, color: theme.accentText }
+    : { background: text, color: surfaceLight ? '#ffffff' : '#0f0f12' }
+  return {
+    surface: `linear-gradient(${theme.card}, ${theme.card}), ${theme.bg}`,
+    text,
+    muted: `color-mix(in srgb, ${text} 68%, transparent)`,
+    border: `color-mix(in srgb, ${text} 16%, transparent)`,
+    subtle: `color-mix(in srgb, ${text} 8%, transparent)`,
+    primary,
+    light: surfaceLight,
+  }
+}
+
 // Color de texto legible sobre theme.card. Algunos temas usan tarjetas claras
 // sobre un fondo oscuro (texto general blanco) y definen `cardText`.
 export function cardTextColor(theme) {

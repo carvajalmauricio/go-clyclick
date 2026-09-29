@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { uploadMedia } from '../utils/api.js'
 import {
   DEFAULT_HERO_SLIDES,
   HERO_INTERVAL_MAX,
@@ -7,7 +6,10 @@ import {
   HERO_SLIDES_LIMIT,
 } from '../utils/heroSlides.js'
 import { Icon } from './Icons.jsx'
-import { Field, FileButton, IconButton, Toggle, inputCls } from './admin/ui.jsx'
+import { Field, IconButton, Toggle, inputCls } from './admin/ui.jsx'
+import ImageUploadButton from './admin/ImageUploadButton.jsx'
+import { CROP_PRESETS } from '../utils/image.js'
+import { logoRadius, normalizeHeader } from '../utils/header.js'
 
 // Editor de los slides de la tarjeta de presentación. El slide 1 siempre es la
 // presentación base (logo, nombre, descripción y categoría de "Información básica").
@@ -15,7 +17,9 @@ export default function HeroSlidesManager({ business, onChange }) {
   const config = { ...DEFAULT_HERO_SLIDES, ...(business.heroSlides || {}) }
   const items = Array.isArray(config.items) ? config.items : []
   const [uploading, setUploading] = useState('')
-  const [uploadError, setUploadError] = useState('')
+  const header = normalizeHeader(business.header)
+  // El recorte sigue la forma elegida para el logo (los slides se muestran en su lugar).
+  const preset = { ...CROP_PRESETS.slide, shape: header.logoShape === 'circle' ? 'circle' : 'rect' }
 
   function commit(update) {
     onChange({ heroSlides: { ...config, items, ...update } })
@@ -43,22 +47,6 @@ export default function HeroSlidesManager({ business, onChange }) {
     const next = [...items]
     ;[next[index], next[target]] = [next[target], next[index]]
     commit({ items: next })
-  }
-
-  async function onImage(id, event) {
-    const file = event.target.files?.[0]
-    if (!file) return
-    setUploadError('')
-    setUploading(id)
-    try {
-      const { url } = await uploadMedia(file, business.slug || business.name || 'general', 'slide')
-      patchItem(id, { image: url })
-    } catch (err) {
-      setUploadError(err.message)
-    } finally {
-      setUploading('')
-      event.target.value = ''
-    }
   }
 
   const intervalValid = config.interval !== '' && Number.isFinite(Number(config.interval))
@@ -95,7 +83,7 @@ export default function HeroSlidesManager({ business, onChange }) {
 
         <ol className="space-y-3">
           <li className="flex items-center gap-3 rounded-xl border border-dashed border-gray-700 p-3">
-            <SlideThumb image={business.logo} />
+            <SlideThumb image={business.logo} shape={header.logoShape} />
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Slide 1 · Presentación</p>
               <p className="truncate text-sm text-gray-300">{business.name || 'Nombre del negocio'}</p>
@@ -106,7 +94,7 @@ export default function HeroSlidesManager({ business, onChange }) {
           {items.map((item, index) => (
             <li key={item.id} className="rounded-xl border border-gray-700 bg-gray-900/70 p-3">
               <div className="flex gap-3">
-                <SlideThumb image={item.image} fallback={business.logo} />
+                <SlideThumb image={item.image} fallback={business.logo} shape={header.logoShape} />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-1">
                     <p className="flex-1 text-[11px] font-semibold uppercase tracking-wider text-clickclick-orange">Slide {index + 2}</p>
@@ -115,12 +103,14 @@ export default function HeroSlidesManager({ business, onChange }) {
                     <IconButton icon="trash" label="Eliminar slide" tone="danger" onClick={() => removeItem(item.id)} />
                   </div>
                   <div className="mt-1 flex flex-wrap items-center gap-2">
-                    <FileButton
+                    <ImageUploadButton
                       label={item.image ? 'Cambiar imagen' : 'Subir imagen'}
-                      busy={uploading === item.id}
-                      disabled={Boolean(uploading)}
+                      preset={preset}
+                      slug={business.slug || business.name}
+                      disabled={Boolean(uploading) && uploading !== item.id}
+                      onBusyChange={(busy) => setUploading(busy ? item.id : '')}
                       accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
-                      onFile={(event) => onImage(item.id, event)}
+                      onUploaded={(image) => onChange((prev) => ({ heroSlides: { ...DEFAULT_HERO_SLIDES, ...(prev.heroSlides || {}), items: (prev.heroSlides?.items || []).map((slide) => (slide.id === item.id ? { ...slide, image } : slide)) } }))}
                     />
                     {item.image
                       ? <button type="button" onClick={() => patchItem(item.id, { image: '' })} className="px-1 text-xs text-gray-400 hover:text-white">Quitar</button>
@@ -144,7 +134,6 @@ export default function HeroSlidesManager({ business, onChange }) {
           ))}
         </ol>
 
-        {uploadError && <p role="alert" className="text-xs text-red-400">{uploadError}</p>}
         {config.enabled && items.length === 0 && (
           <p className="flex items-center gap-2 text-xs text-amber-300"><Icon name="info" size={14} />Agrega al menos un slide para que la presentación empiece a rotar.</p>
         )}
@@ -162,9 +151,9 @@ export default function HeroSlidesManager({ business, onChange }) {
   )
 }
 
-function SlideThumb({ image, fallback }) {
+function SlideThumb({ image, fallback, shape = 'circle' }) {
   return (
-    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full border border-gray-600 bg-gray-800">
+    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden border border-gray-600 bg-gray-800" style={{ borderRadius: logoRadius(shape, 56) }}>
       {image ? (
         <img src={image} alt="" className="h-full w-full object-cover" />
       ) : fallback ? (

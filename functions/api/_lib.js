@@ -7,8 +7,9 @@ import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
 import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonStyles.js'
-import { LINK_ICONS, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
+import { LINK_ICONS, buildActions, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
 import { BACKGROUND_PATTERNS, THEMES } from '../../src/utils/themes.js'
+import { normalizeHeader } from '../../src/utils/header.js'
 import { normalizeFont } from '../../src/utils/fonts.js'
 import { LANGUAGES } from '../../src/utils/i18n.js'
 
@@ -231,12 +232,35 @@ export async function writeIndex(env, index) {
 
 // Inserta o actualiza una entrada del índice a partir de un negocio completo
 export function upsertIndexEntry(index, business) {
+  const background = business.background || {}
+  // Perfiles con puerta de edad: el índice público no expone su portada ni su
+  // imagen de fondo (coherente con _metadata.js, que no incrusta el negocio).
+  const gated = business.ageGate?.enabled === true
   const entry = {
     slug: business.slug,
     name: business.name || '',
     category: business.category || '',
     logo: business.logo || '',
     updatedAt: business.updatedAt || Date.now(),
+    // Datos visuales para la miniatura del listado del admin (#12).
+    theme: business.theme || 'vibrant',
+    customColors: business.customColors,
+    autoTheme: business.autoTheme === true,
+    lightTheme: business.lightTheme,
+    darkTheme: business.darkTheme,
+    background: {
+      type: background.type || 'theme',
+      color: background.color,
+      color2: background.color2,
+      angle: background.angle,
+      pattern: background.pattern,
+      url: background.type === 'image' && !gated ? background.url : undefined,
+      overlay: background.overlay,
+    },
+    buttonStyle: business.buttonStyle,
+    header: business.header ? { cover: gated ? '' : business.header.cover, logoShape: business.header.logoShape } : undefined,
+    buttons: buildActions(business).length,
+    ageGate: gated,
   }
   const idx = index.findIndex((e) => e.slug === business.slug)
   if (idx >= 0) {
@@ -406,6 +430,8 @@ export function normalizeBusiness(payload) {
     logo: String(payload.logo || '').trim(), // URL (R2 en el futuro o externa por ahora)
     // Slides que rotan en la tarjeta de presentación después del slide base
     heroSlides: normalizeHeroSlides(payload.heroSlides),
+    // Cabecera: portada, forma/tamaño del logo y alineación
+    header: normalizeHeader(payload.header),
     theme: String(payload.theme || 'vibrant'),
     // Fuente personalizada del perfil (#8)
     font,

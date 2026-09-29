@@ -38,7 +38,7 @@ export async function onRequestPost(context) {
   const file = form.get('file')
   const slug = slugify(form.get('slug') || 'general')
   const requestedKind = String(form.get('kind') || 'media')
-  const kind = ['logo', 'thumbnail', 'background', 'slide'].includes(requestedKind) ? requestedKind : 'media'
+  const kind = ['logo', 'cover', 'thumbnail', 'background', 'slide'].includes(requestedKind) ? requestedKind : 'media'
 
   if (!file || typeof file === 'string') {
     return json({ error: 'Falta el archivo "file"' }, 400)
