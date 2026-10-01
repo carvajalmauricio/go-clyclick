@@ -1,5 +1,6 @@
 import { fontStylesheetUrl } from '../../src/utils/fonts.js'
 import { themeColor } from '../../src/utils/themes.js'
+import { SITE } from '../../src/utils/site.js'
 
 function escapeHtml(value) {
   return String(value).replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[char])
@@ -43,6 +44,42 @@ export function profileMetadata(business, origin) {
     ? `<meta name="theme-color" media="(prefers-color-scheme: light)" content="${escapeHtml(themeColor(business, false))}"><meta name="theme-color" media="(prefers-color-scheme: dark)" content="${escapeHtml(themeColor(business, true))}">`
     : `<meta name="theme-color" content="${escapeHtml(themeColor(business))}">`
   return { title, description, html: `${tags}${themeTags}<link rel="canonical" href="${escapeHtml(url)}">${fontLink}` }
+}
+
+// --- Página de inicio (/) -----------------------------------------------------
+// Las etiquetas de la página de inicio se añaden aquí y no en index.html: el
+// mismo HTML sirve los perfiles, y los rastreadores y navegadores usan la
+// PRIMERA og:* / theme-color que encuentran.
+const HOME_TITLE = SITE.title
+const HOME_DESCRIPTION = SITE.description
+
+export function homeMetadata(origin) {
+  const url = new URL('/', origin).href
+  const image = new URL(SITE.image, origin).href
+  const tags = [
+    ['property', 'og:type', 'website'], ['property', 'og:site_name', 'ClyClick'],
+    ['property', 'og:locale', 'es_EC'],
+    ['property', 'og:title', HOME_TITLE], ['property', 'og:description', HOME_DESCRIPTION],
+    ['property', 'og:url', url], ['property', 'og:image', image],
+    ['property', 'og:image:width', '1200'], ['property', 'og:image:height', '630'],
+    ['property', 'og:image:alt', 'Perfil digital de un negocio creado con ClyClick en un teléfono'],
+    ['name', 'twitter:card', 'summary_large_image'], ['name', 'twitter:title', HOME_TITLE],
+    ['name', 'twitter:description', HOME_DESCRIPTION], ['name', 'twitter:image', image],
+    ['name', 'theme-color', SITE.themeColor],
+  ].map(([attribute, key, value]) => `<meta ${attribute}="${key}" content="${escapeHtml(value)}">`).join('')
+  return { title: HOME_TITLE, description: HOME_DESCRIPTION, html: `${tags}<link rel="canonical" href="${escapeHtml(url)}">` }
+}
+
+export async function addHomeMetadata(response, request) {
+  const url = new URL(request.url)
+  if (url.pathname !== '/' || !['GET', 'HEAD'].includes(request.method)
+    || !response.ok || !response.headers.get('Content-Type')?.includes('text/html')) return response
+  const metadata = homeMetadata(url.origin)
+  return new HTMLRewriter()
+    .on('title', { element(element) { element.setInnerContent(metadata.title) } })
+    .on('meta[name="description"]', { element(element) { element.setAttribute('content', metadata.description) } })
+    .on('head', { element(element) { element.append(metadata.html, { html: true }) } })
+    .transform(response)
 }
 
 export async function addProfileMetadata(response, request, env) {

@@ -232,6 +232,9 @@ body {
   .profile-action-shine::after { --profile-shine-opacity: .2; animation-duration: 6s; }
 }
 
+/* El perfil dentro de un teléfono de muestra usa su fuente, no la de la página. */
+.phone-screen { font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif; }
+
 /* ---------------------------------------------------------------------------
    Cartel de mesa imprimible (tent card)
 --------------------------------------------------------------------------- */

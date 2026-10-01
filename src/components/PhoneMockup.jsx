@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import ProfileView from './ProfileView.jsx'
 import { isLightColor, themeColor } from '../utils/themes.js'
+import { slugify } from '../utils/slug.js'
 
 // Tamaños lógicos de móviles reales. El perfil se renderiza a ese ancho real y
 // se escala con `zoom`, así el preview muestra los mismos tamaños, saltos de
@@ -27,25 +28,36 @@ export function browserChrome(business, scheme) {
     : { bar: top, text: '#f5f5f7', field: 'rgba(255,255,255,.12)', muted: '#a1a1aa' }
 }
 
+// Sin slug todavía (perfil nuevo) se muestra el que se generará del nombre.
 export function hostLabel(business) {
-  return `go.clyclick.online/${business.slug || 'tu-negocio'}`
+  return `go.clyclick.online/${business.slug || slugify(business.name) || 'tu-negocio'}`
 }
 
 // Simulador de smartphone que muestra el perfil en vivo mientras se edita.
-export default function PhoneMockup({ business, device = DEVICES[1], scheme, onSelect, highlightKey }) {
+// - `width`: ancho de la pantalla en px (el perfil se escala para caber).
+// - `interactive={false}`: vitrina no interactiva (página de inicio): el perfil
+//   se vuelve `inert` (sin clics ni foco) pero se puede desplazar.
+// - `caption`: true (texto por defecto), un texto propio o false (sin texto).
+// - `transitionKey`: al cambiar, la pantalla aparece con un fundido.
+export default function PhoneMockup({ business, device = DEVICES[1], scheme, onSelect, highlightKey, width = SCREEN_WIDTH, interactive = true, caption = true, transitionKey, className = '' }) {
   const [host, setHost] = useState(null)
-  const scale = SCREEN_WIDTH / device.width
+  const ratio = width / SCREEN_WIDTH
+  const bezel = Math.max(6, Math.round(BEZEL * ratio))
+  const scale = width / device.width
   const screenHeight = Math.round(device.height * scale)
   const chrome = browserChrome(business, scheme)
+  const profile = host && <ProfileView business={business} embedded device="mobile" forceScheme={scheme} onSelect={onSelect} highlightKey={highlightKey} portalTarget={host} />
+  const wrapped = !interactive || transitionKey !== undefined
 
   return (
-    <div className="flex flex-col items-center">
+    <div className={`flex flex-col items-center ${className}`}>
       <div
-        className="relative rounded-[3rem] bg-black shadow-2xl ring-1 ring-gray-700"
-        style={{ width: SCREEN_WIDTH + BEZEL * 2, height: screenHeight + BEZEL * 2, padding: BEZEL }}
+        className="relative bg-black shadow-2xl ring-1 ring-gray-700"
+        style={{ width: width + bezel * 2, height: screenHeight + bezel * 2, padding: bezel, borderRadius: Math.round(48 * ratio) }}
       >
         {/* Pantalla: todo lo de dentro se dibuja a tamaño real y se escala */}
-        <div className="h-full w-full overflow-hidden rounded-[2.4rem]" style={{ background: chrome.bar }}>
+        {/* phone-screen: el perfil usa su propia fuente, no la de la página que lo contiene. */}
+        <div className="phone-screen h-full w-full overflow-hidden" style={{ background: chrome.bar, borderRadius: Math.round(38 * ratio) }}>
           <div
             ref={setHost}
             className="relative flex flex-col"
@@ -68,16 +80,25 @@ export default function PhoneMockup({ business, device = DEVICES[1], scheme, onS
             </div>
             {/* Viewport del navegador: aquí vive el perfil real */}
             <div data-preview-scroller className="relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {host && <ProfileView business={business} embedded device="mobile" forceScheme={scheme} onSelect={onSelect} highlightKey={highlightKey} portalTarget={host} />}
+              {wrapped
+                ? (
+                  // `inert` se fija como propiedad del DOM: funciona igual con React 18 y 19.
+                  <div key={transitionKey} ref={(node) => { if (node) node.inert = !interactive }} className={`h-full ${transitionKey !== undefined ? 'phone-screen-enter' : ''}`}>
+                    {profile}
+                  </div>
+                )
+                : profile}
             </div>
             {/* Indicador de inicio */}
             <div aria-hidden="true" className="pointer-events-none absolute bottom-2 left-1/2 z-[60] h-[5px] w-[134px] -translate-x-1/2 rounded-full" style={{ background: chrome.text, opacity: 0.55 }} />
           </div>
         </div>
       </div>
-      <p className="mt-3 text-center text-xs text-gray-400">
-        {device.width}×{device.height} · tamaño real{onSelect ? ' · toca un elemento para editarlo' : ''}
-      </p>
+      {caption !== false && (
+        <p className="mt-3 text-center text-xs text-gray-400">
+          {caption === true ? <>{device.width}×{device.height} · tamaño real{onSelect ? ' · toca un elemento para editarlo' : ''}</> : caption}
+        </p>
+      )}
     </div>
   )
 }

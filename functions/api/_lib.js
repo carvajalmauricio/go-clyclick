@@ -10,6 +10,7 @@ import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonSty
 import { LINK_ICONS, buildActions, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
 import { BACKGROUND_PATTERNS, THEMES } from '../../src/utils/themes.js'
 import { normalizeHeader } from '../../src/utils/header.js'
+import { slugify } from '../../src/utils/slug.js'
 import { normalizeFont } from '../../src/utils/fonts.js'
 import { LANGUAGES } from '../../src/utils/i18n.js'
 
@@ -59,18 +60,8 @@ export function sanitizeLinkUrl(value) {
   return url
 }
 
-// Convierte un texto en un slug seguro para URL: "Pizzería Napolí!" -> "pizzeria-napoli"
-export function slugify(input) {
-  return String(input || '')
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '') // quita acentos
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9\s-]/g, '') // solo alfanumérico, espacios y guiones
-    .replace(/\s+/g, '-') // espacios -> guiones
-    .replace(/-+/g, '-') // colapsa guiones repetidos
-    .replace(/^-|-$/g, '') // sin guiones al inicio/fin
-}
+// slugify vive en src/utils/slug.js (lo usa también el navegador).
+export { slugify }
 
 // ---------------------------------------------------------------------------
 // Autorización
@@ -261,6 +252,8 @@ export function upsertIndexEntry(index, business) {
     header: business.header ? { cover: gated ? '' : business.header.cover, logoShape: business.header.logoShape } : undefined,
     buttons: buildActions(business).length,
     ageGate: gated,
+    // Aparece en "Perfiles reales" de la página de inicio (nunca con puerta de edad).
+    showcase: business.showcase !== false && !gated,
   }
   const idx = index.findIndex((e) => e.slug === business.slug)
   if (idx >= 0) {
@@ -432,6 +425,8 @@ export function normalizeBusiness(payload) {
     heroSlides: normalizeHeroSlides(payload.heroSlides),
     // Cabecera: portada, forma/tamaño del logo y alineación
     header: normalizeHeader(payload.header),
+    // Mostrar como ejemplo en la página de inicio (sin el campo: sí)
+    showcase: payload.showcase !== false,
     theme: String(payload.theme || 'vibrant'),
     // Fuente personalizada del perfil (#8)
     font,
