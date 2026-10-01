@@ -187,6 +187,18 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
             {b.descriptionColor ? 'Usar color del tema' : 'Usando color del tema'}
           </button>
         </div>
+
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300">Mostrar en la página de inicio</p>
+            <p className="text-[11px] text-gray-500">
+              {b.ageGate?.enabled
+                ? 'Los perfiles con puerta de edad nunca se muestran en la página de inicio.'
+                : 'Aparece como ejemplo real en go.clyclick.online. Actívalo cuando el cliente esté de acuerdo.'}
+            </p>
+          </div>
+          <Toggle checked={b.showcase !== false} onChange={(checked) => onChange({ showcase: checked })} label="Mostrar en la página de inicio" />
+        </div>
       </SectionCard>
 
       <SectionCard {...card('slides')}>
@@ -418,7 +430,7 @@ function getSummaries(b) {
     b.ageGate?.enabled ? 'puerta de edad' : '',
   ].filter(Boolean)
   return {
-    basic: [b.name || 'Sin nombre', b.category, b.logo ? 'con logo' : 'sin logo'].filter(Boolean).join(' · '),
+    basic: [b.name || 'Sin nombre', b.category, b.logo ? 'con logo' : 'sin logo', b.showcase !== false && !b.ageGate?.enabled ? 'en la página de inicio' : ''].filter(Boolean).join(' · '),
     slides: b.heroSlides?.enabled && slides
       ? `Activo · ${plural(slides + 1, 'slide', 'slides')} · cada ${b.heroSlides.interval || 3} s`
       : 'Desactivado',

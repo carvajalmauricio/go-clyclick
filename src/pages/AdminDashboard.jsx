@@ -11,7 +11,9 @@ import { BANK_SECTION_ID } from '../utils/banking.js'
 import { DEFAULT_HEADER, logoRadius, normalizeHeader } from '../utils/header.js'
 import { createHistory, historyReducer } from '../utils/history.js'
 import { getSectionIssues, hasErrors, pendingIssues } from '../utils/sectionIssues.js'
-import { getIdentity, getBusiness, saveBusiness } from '../utils/api.js'
+import { getIdentity, getBusiness, saveBusiness, updateLead } from '../utils/api.js'
+import { leadToBusiness } from '../utils/leads.js'
+import { formatPhone, leadReplyMessage, whatsappLink } from '../utils/contact.js'
 
 const EMPTY_BUSINESS = {
   name: '',
@@ -39,13 +41,15 @@ const EMPTY_BUSINESS = {
   actionSettings: [],
   sections: [{ id: BANK_SECTION_ID, title: 'Datos Bancarios' }],
   bankAccounts: [],
+  // Los perfiles nuevos no aparecen en la página de inicio hasta activarlo.
+  showcase: false,
 }
 
 // El acceso a /admin lo protege Cloudflare Access (Google + OTP) ANTES de que
 // esta página cargue. Por eso aquí ya no hay pantalla de login por token:
 // si el navegador llegó hasta aquí, el usuario ya está autenticado.
 export default function AdminDashboard() {
-  const [view, setView] = useState('list') // 'list' | 'edit-new' | { mode: 'edit', slug }
+  const [view, setView] = useState('list') // 'list' | 'edit-new' | { mode: 'edit', slug } | { mode: 'new', lead }
   const [identity, setIdentity] = useState(() => (isLocalDevelopment() ? {} : undefined))
 
   useEffect(() => {
@@ -84,9 +88,10 @@ export default function AdminDashboard() {
         <BusinessList setView={setView} email={identity.email || ''} />
       ) : (
         <Editor
-          key={typeof view === 'object' ? view.slug : 'new'}
+          key={typeof view === 'object' ? view.slug || `lead-${view.lead?.id}` : 'new'}
           isEdit={typeof view === 'object' && view.mode === 'edit'}
-          slug={typeof view === 'object' ? view.slug : null}
+          slug={typeof view === 'object' && view.mode === 'edit' ? view.slug : null}
+          lead={typeof view === 'object' ? view.lead || null : null}
           onDone={() => setView('list')}
         />
       )}
@@ -137,7 +142,7 @@ function isTyping(event) {
 }
 
 // --- Editor con preview en vivo ---
-function Editor({ isEdit, slug, onDone }) {
+function Editor({ isEdit, slug, lead = null, onDone }) {
   const toast = useToast()
   const [history, dispatch] = useReducer(historyReducer, EMPTY_BUSINESS, createHistory)
   const business = history.present
@@ -154,7 +159,9 @@ function Editor({ isEdit, slug, onDone }) {
   const [scheme, setScheme] = useState(prefersDarkScheme)
   const [desktopOpen, setDesktopOpen] = useState(false)
   const [showShortcuts, setShowShortcuts] = useState(false)
-  const draftKey = draftKeyFor(slug)
+  // Un perfil creado desde una solicitud guarda su borrador aparte.
+  const draftId = slug || (lead ? `lead-${lead.id}` : '')
+  const draftKey = draftKeyFor(draftId)
   const dirty = JSON.stringify(business) !== JSON.stringify(baseline)
   const loadFailed = Boolean(loadError)
   const issues = getSectionIssues(business)
@@ -166,13 +173,18 @@ function Editor({ isEdit, slug, onDone }) {
         const data = isEdit ? await getBusiness(slug) : EMPTY_BUSINESS
         if (!data) throw new Error('No se encontró el negocio')
         if (!active) return
-        const initial = { ...EMPTY_BUSINESS, ...data, header: normalizeHeader(data.header) }
+        // Perfiles guardados antes de existir "showcase" se muestran en la
+        // página de inicio (igual que en el servidor); los nuevos, no.
+        const initial = { ...EMPTY_BUSINESS, ...data, header: normalizeHeader(data.header), showcase: isEdit ? data.showcase !== false : false }
         setBaseline(initial)
-        const draft = readDraft(slug)
+        const draft = readDraft(draftId)
         if (draft) {
           dispatch({ type: 'reset', value: { ...initial, ...draft.business, ...(isEdit ? { slug } : {}) } })
           setDraftRecovered(true)
           toast.info('Borrador recuperado de este navegador. Aún no está publicado.', { id: 'draft', duration: 8000 })
+        } else if (lead) {
+          dispatch({ type: 'reset', value: { ...initial, ...leadToBusiness(lead) } })
+          toast.info(`Datos cargados desde la solicitud de ${lead.contactName}. Revisa y completa el perfil.`, { id: 'draft', duration: 7000 })
         } else {
           dispatch({ type: 'reset', value: initial })
         }
@@ -294,6 +306,15 @@ function Editor({ isEdit, slug, onDone }) {
       try { localStorage.removeItem(draftKey) } catch { /* Published successfully. */ }
       const publishedSlug = result?.slug || business.slug
       toast.success(`«${business.name}» publicado.`, publishedSlug ? { action: { label: 'Ver perfil', onClick: () => window.open(`/${publishedSlug}`, '_blank', 'noopener') } } : undefined)
+      // La solicitud queda como atendida y enlazada al perfil creado (se espera
+      // para que el listado ya la muestre así al volver).
+      if (lead) {
+        try {
+          await updateLead(lead.id, { status: 'won', slug: publishedSlug || '' })
+        } catch {
+          toast.error('El perfil se publicó, pero no se pudo marcar la solicitud como atendida.')
+        }
+      }
       onDone()
     } catch (e) {
       toast.error(e.message)
@@ -426,6 +447,18 @@ function Editor({ isEdit, slug, onDone }) {
             <button type="button" onClick={discardDraft} disabled={saving || loadFailed} className="text-xs text-gray-400">Descartar cambios</button>
           )}
         </div>
+        {lead && (
+          <div className="mb-3 flex flex-wrap items-center gap-x-3 gap-y-2 rounded-xl border border-clickclick-orange/30 bg-clickclick-orange/[.07] px-4 py-2.5 text-sm">
+            <Icon name="inbox" size={16} className="shrink-0 text-clickclick-orange" />
+            <span className="min-w-0 flex-1 text-gray-200">
+              Solicitud de <strong className="text-white">{lead.contactName}</strong> · {formatPhone(lead.whatsapp)}
+              {lead.message && <span className="block truncate text-xs text-gray-400">«{lead.message}»</span>}
+            </span>
+            <a href={whatsappLink(lead.whatsapp, leadReplyMessage(lead))} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 rounded-lg bg-[#25D366] px-3 py-1.5 text-xs font-semibold text-[#062b16] hover:brightness-105">
+              <Icon name="whatsapp" size={14} /> Escribirle
+            </a>
+          </div>
+        )}
         {loadError && (
           <p role="alert" className="mb-3 flex items-center gap-2 rounded-xl border border-red-900 bg-red-950/40 px-4 py-2.5 text-sm text-red-300">
             <Icon name="info" size={16} className="shrink-0" /> {loadError}

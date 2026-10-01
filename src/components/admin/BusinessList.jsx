@@ -5,6 +5,8 @@ import PrintableDisplay from '../PrintableDisplay.jsx'
 import { IconButton, inputCls } from './ui.jsx'
 import { Avatar, Brand, initialsOf, readDraft, timeAgo } from './common.jsx'
 import { useToast } from './Toast.jsx'
+import LeadsPanel from './LeadsPanel.jsx'
+import { useLeads } from './useLeads.js'
 import { deleteBusiness, getBusiness, listBusinesses } from '../../utils/api.js'
 import { getBackgroundStyle, profileThemeId, resolveTheme } from '../../utils/themes.js'
 import { getButtonColors } from '../../utils/buttonColors.js'
@@ -28,12 +30,16 @@ function visualFields(business) {
     header: business.header,
     buttons: buildActions(business).length,
     ageGate: business.ageGate?.enabled === true,
+    showcase: business.showcase !== false,
   }
 }
 
 // --- Listado visual de negocios (#12) ---
 export default function BusinessList({ setView, email }) {
   const toast = useToast()
+  // Pestaña activa: "#solicitudes" en la URL abre directamente las solicitudes.
+  const [tab, setTab] = useState(() => (window.location.hash === '#solicitudes' ? 'leads' : 'businesses'))
+  const leadsState = useLeads()
   const [items, setItems] = useState(null)
   const [enriched, setEnriched] = useState({})
   const [error, setError] = useState('')
@@ -100,6 +106,11 @@ export default function BusinessList({ setView, email }) {
     }
   }
 
+  function selectTab(next) {
+    setTab(next)
+    window.history.replaceState(null, '', next === 'leads' ? '#solicitudes' : window.location.pathname)
+  }
+
   async function copyLink(slug) {
     const ok = await copyText(profileUrl(slug))
     ok ? toast.success('Enlace copiado.', { id: 'copy' }) : toast.error('No se pudo copiar el enlace.')
@@ -126,6 +137,35 @@ export default function BusinessList({ setView, email }) {
       </header>
 
       <main className="mx-auto max-w-6xl px-4 py-6 sm:px-6">
+        <div role="tablist" aria-label="Secciones del panel" className="mb-6 flex w-full gap-1 rounded-xl border border-gray-800 bg-gray-900/60 p-1 sm:w-fit">
+          {[
+            ['businesses', 'store', 'Negocios', items ? items.length : null, false],
+            ['leads', 'inbox', 'Solicitudes', leadsState.newCount || null, leadsState.newCount > 0],
+          ].map(([id, icon, label, count, highlight]) => (
+            <button
+              key={id}
+              type="button"
+              role="tab"
+              id={`tab-${id}`}
+              aria-selected={tab === id}
+              aria-controls={`panel-${id}`}
+              onClick={() => selectTab(id)}
+              className={`inline-flex flex-1 items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm transition sm:flex-none ${tab === id ? 'bg-gray-800 font-semibold text-white' : 'text-gray-400 hover:text-white'}`}
+            >
+              <Icon name={icon} size={15} /> {label}
+              {count !== null && (
+                <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold ${highlight ? 'bg-clickclick-orange text-clickclick-dark' : 'bg-gray-700 text-gray-300'}`} aria-label={highlight ? `${count} nuevas` : undefined}>{count}</span>
+              )}
+            </button>
+          ))}
+        </div>
+
+        {tab === 'leads' ? (
+          <div role="tabpanel" id="panel-leads" aria-labelledby="tab-leads">
+            <LeadsPanel state={leadsState} onCreateProfile={(lead) => setView({ mode: 'new', lead })} />
+          </div>
+        ) : (
+        <div role="tabpanel" id="panel-businesses" aria-labelledby="tab-businesses">
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-xl font-bold">Negocios</h1>
@@ -196,6 +236,7 @@ export default function BusinessList({ setView, email }) {
                     {b.updatedAt && <span>Actualizado {timeAgo(b.updatedAt)}</span>}
                     {Number.isFinite(b.buttons) && <span>· {b.buttons} {b.buttons === 1 ? 'botón' : 'botones'}</span>}
                     {b.ageGate && <span>· +18</span>}
+                    {b.showcase !== false && !b.ageGate && <span className="text-clickclick-orange/80" title="Aparece en la página de inicio">· En inicio</span>}
                   </p>
                   <div className="mt-auto flex items-center gap-1 border-t border-gray-800 pt-3">
                     <button
@@ -216,6 +257,8 @@ export default function BusinessList({ setView, email }) {
             )
           })}
         </ul>
+        </div>
+        )}
       </main>
 
       {modal && (

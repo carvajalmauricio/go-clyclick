@@ -4,7 +4,7 @@
 export const THEMES = {
   vibrant: {
     id: 'vibrant',
-    name: 'ClickClick Vibrant',
+    name: 'ClyClick Vibrant',
     bg: '#0f0f12',
     bgGradient: 'linear-gradient(160deg, #1a1a20 0%, #0f0f12 100%)',
     text: '#ffffff',

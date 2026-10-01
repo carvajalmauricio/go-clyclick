@@ -74,6 +74,50 @@ puedes cambiar su título o asignar las cuentas a otra sección.
   escritorio 1280×800) y lo escala. Con el modo claro/oscuro automático se pueden ver ambos modos.
   Tocar un elemento del preview abre su configuración, y el botón que se edita se resalta en el preview.
 
+## Página de inicio (`/`)
+
+Presenta ClyClick y recibe solicitudes de perfil (`src/pages/Landing.jsx`).
+
+- **Portada**: un teléfono va mostrando, cada 4 segundos, los **perfiles reales** publicados (los
+  mismos de *Ejemplos reales*), con un enlace para abrir el que se está viendo. Si el visitante
+  escribe el nombre de su negocio, el teléfono muestra su perfil en vivo con ese nombre, su enlace y
+  el rubro deducido del nombre; luego puede elegir rubro y estilo (plantillas en
+  `src/utils/rubros.js`). Solo si no hay perfiles para mostrar, rota ejemplos por rubro.
+- Los fondos de video de los perfiles se cargan después del resto de la página (y nunca con ahorro
+  de datos); mientras tanto se ve su degradado.
+- **Contacto**: *Me gusta, ¡créalo!* ofrece escribir por WhatsApp (+593 97 873 5190, mensaje
+  prellenado con negocio, rubro y estilo) o llenar un formulario. También hay una sección de contacto
+  con el correo info@clyclick.online y un botón flotante de WhatsApp. Los datos de contacto están
+  en `src/utils/contact.js`.
+- **Ejemplos reales**: se muestran los perfiles publicados con **Mostrar en la página de inicio**
+  activado (en *Información básica*), nunca los que tienen puerta de edad. Los perfiles que ya
+  existían aparecen por defecto; los nuevos no aparecen hasta activar la opción.
+- Un enlace que no existe (`/mi-negocio`) invita a crear el perfil y abre la portada con ese nombre.
+- La imagen para compartir es `public/og-home.jpg` (1200×630). El servidor añade las etiquetas de `/`
+  en `functions/api/_metadata.js`, no en `index.html`, para no pisar las de los perfiles.
+- La página de inicio y el panel se cargan aparte: quien abre un perfil solo descarga el perfil.
+
+## Solicitudes (pestaña del panel)
+
+Lo que envían con el formulario aparece en **Panel → Solicitudes** (`/admin#solicitudes`), con un
+contador de nuevas. Desde ahí se puede responder por WhatsApp (queda como *Contactada*), cambiar el
+estado, agregar una nota interna, eliminarla o **Crear perfil**. Este último abre el editor con el
+nombre, la categoría, el estilo, el WhatsApp y los botones típicos del rubro; al publicar, la
+solicitud pasa a *Perfil creado* y enlaza el perfil.
+
+- Cada solicitud se guarda en el KV `BUSINESSES` como `lead:<id>`, con su resumen en los metadatos
+  para listarlas con una sola consulta.
+- Protecciones de `POST /api/leads`: mismo origen, máximo 4 KB, campo trampa para bots, tiempo
+  mínimo de llenado (2 s), validación, **5 solicitudes por hora por conexión** y **150 por día**
+  (claves `ratelimit:*` que caducan solas). Los contadores se escriben antes que la solicitud y,
+  si KV no los acepta, la solicitud se rechaza: una ráfaga no puede agotar la cuota de escrituras
+  de KV (como mucho 3 escrituras por solicitud y 150 solicitudes al día).
+- La IP no se guarda en claro, solo un hash. Para que ese hash no se pueda adivinar, define el
+  secreto `LEAD_SALT` (`npx wrangler pages secret put LEAD_SALT --project-name clickclick-go-git`).
+- Un script insistente sí puede agotar el cupo diario del formulario (WhatsApp sigue funcionando).
+  Para frenarlo, se recomienda en Cloudflare una regla de *Rate limiting* (WAF) para `/api/leads`
+  o Cloudflare Turnstile.
+
 ## Perfil público
 
 - **Cabecera**: portada opcional (3:1), logo circular, redondeado o cuadrado en tres tamaños, y
@@ -107,6 +151,9 @@ puedes cambiar su título o asignar las cuentas a otra sección.
 | POST | `/admin/api/delete` | Access | Eliminar negocio de KV |
 | POST | `/admin/api/upload` | Access | Subir logo (multipart) a R2 |
 | GET | `/api/assets/*` | pública | Servir imágenes desde R2 (cache immutable) |
+| POST | `/api/leads` | pública | Solicitud de perfil desde la página de inicio |
+| GET | `/admin/api/leads` | Access | Listar solicitudes |
+| POST | `/admin/api/leads` | Access | Actualizar (`action: 'update'`) o eliminar (`action: 'delete'`) una solicitud |
 
 Las escrituras se sirven bajo `/admin`, por lo que heredan la protección de
 Cloudflare Access. Las rutas heredadas bajo `/api` conservan el fallback

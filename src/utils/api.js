@@ -9,20 +9,36 @@
 // peticiones administrativas usan redirect: 'manual' para impedir que fetch
 // intente seguir esa redirección hacia otro dominio y termine bloqueada por
 // CORS. La navegación principal sí puede abrir el login de Access.
-function handleAuthRedirect(res) {
-  if (res.redirected || res.type === 'opaqueredirect') {
-    window.location.assign('/admin')
-    throw new Error('Sesión expirada, reautenticando...')
-  }
-  if (res.status === 401 || res.status === 403) {
-    window.location.assign('/admin')
-    throw new Error('Sesión expirada, reautenticando...')
-  }
+//
+// Para no entrar en un bucle de recargas (p. ej. en local, donde no hay
+// Access, o si el servidor rechaza una sesión válida), solo se redirige una
+// vez cada 30 s y nunca en localhost; las llamadas en segundo plano (como la
+// lista de solicitudes) pueden pedir que no se redirija.
+const REDIRECT_KEY = 'clyclick:auth-redirect'
+
+function canRedirect() {
+  if (['localhost', '127.0.0.1', '::1'].includes(window.location.hostname)) return false
+  try {
+    const last = Number(sessionStorage.getItem(REDIRECT_KEY)) || 0
+    if (Date.now() - last < 30_000) return false
+    sessionStorage.setItem(REDIRECT_KEY, String(Date.now()))
+  } catch { /* Sin sessionStorage: se redirige igual. */ }
+  return true
 }
 
-async function adminFetch(resource, options = {}) {
+function handleAuthRedirect(res, redirectOnAuth = true) {
+  const authFailed = res.redirected || res.type === 'opaqueredirect' || res.status === 401 || res.status === 403
+  if (!authFailed) return
+  if (redirectOnAuth && canRedirect()) {
+    window.location.assign('/admin')
+    throw new Error('Sesión expirada, reautenticando...')
+  }
+  throw new Error('Tu sesión no es válida. Vuelve a ingresar al panel para continuar.')
+}
+
+async function adminFetch(resource, options = {}, { redirectOnAuth = true } = {}) {
   const res = await fetch(resource, { ...options, redirect: 'manual' })
-  handleAuthRedirect(res)
+  handleAuthRedirect(res, redirectOnAuth)
   return res
 }
 
@@ -97,4 +113,51 @@ export async function deleteBusiness(slug) {
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data.error || `Error al eliminar (${res.status})`)
   return data
+}
+
+// --- Solicitudes de perfil (página de inicio) ---------------------------------
+
+// Envía una solicitud desde la página de inicio (público).
+export async function submitLead(payload) {
+  const res = await fetch('/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const error = new Error(data.error || 'No se pudo enviar tu solicitud.')
+    error.fields = data.fields || {}
+    error.status = res.status
+    throw error
+  }
+  return data
+}
+
+// Lista las solicitudes recibidas (protegido por Access)
+export async function listLeads() {
+  const res = await adminFetch('/admin/api/leads', { headers: { 'Cache-Control': 'no-cache' } }, { redirectOnAuth: false })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `Error al cargar las solicitudes (${res.status})`)
+  return data.leads || []
+}
+
+async function leadAction(body) {
+  const res = await adminFetch('/admin/api/leads', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data.error || `Error al actualizar la solicitud (${res.status})`)
+  return data
+}
+
+// Cambia estado, nota interna o perfil creado de una solicitud
+export async function updateLead(id, changes) {
+  return (await leadAction({ action: 'update', id, changes })).lead
+}
+
+export async function deleteLead(id) {
+  return leadAction({ action: 'delete', id })
 }

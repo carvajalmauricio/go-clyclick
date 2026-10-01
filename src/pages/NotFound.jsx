@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 
 export default function NotFound({ slug }) {
+  const create = slug ? `/?negocio=${encodeURIComponent(slug)}` : '/'
   return (
     <div className="min-h-screen flex flex-col items-center justify-center bg-clickclick-dark text-white p-6 text-center">
       <div className="text-6xl mb-4">🔍</div>
@@ -18,7 +19,11 @@ export default function NotFound({ slug }) {
       >
         Ir al inicio
       </Link>
-      <div className="mt-10 text-xs text-gray-600">Powered by ClickClick</div>
+      <div className="mt-10 max-w-sm rounded-2xl border border-gray-800 bg-gray-900/60 px-5 py-4 text-sm text-gray-400">
+        ¿Tienes un negocio? Crea su perfil digital con ClyClick.{' '}
+        <Link to={create} className="font-semibold text-clickclick-orange hover:underline">Pruébalo gratis en vivo →</Link>
+      </div>
+      <div className="mt-10 text-xs text-gray-600">Powered by ClyClick</div>
     </div>
   )
 }
