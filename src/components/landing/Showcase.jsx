@@ -1,53 +1,31 @@
-import { memo, useEffect, useState } from 'react'
+import { memo } from 'react'
 import PhoneMockup from '../PhoneMockup.jsx'
 import { Icon } from '../Icons.jsx'
 import { sampleBusiness } from '../../utils/rubros.js'
-import { pickShowcase } from '../../utils/site.js'
-import { Reveal, SectionHeading, ghostButton, useInView, useViewportWidth } from './shared.jsx'
+import { Reveal, SectionHeading, ghostButton, useViewportWidth } from './shared.jsx'
 
 const FALLBACK = ['cafeteria', 'barberia']
 
-async function loadShowcase() {
-  const res = await fetch('/api/businesses')
-  if (!res.ok) throw new Error('index')
-  const { businesses } = await res.json()
-  const profiles = await Promise.all(pickShowcase(businesses).map((entry) => (
-    fetch(`/api/business/${encodeURIComponent(entry.slug)}`)
-      .then((response) => (response.ok ? response.json() : null))
-      .catch(() => null)
-  )))
-  return profiles.filter((business) => business && business.slug && business.ageGate?.enabled !== true && business.showcase !== false)
-}
-
-function Showcase({ onCta }) {
-  const [ref, near] = useInView({ rootMargin: '700px 0px' })
-  const [state, setState] = useState({ status: 'idle', items: [] })
+// "Ejemplos reales": los mismos perfiles que rota la portada, uno al lado del
+// otro y con su enlace. `profiles` viene de useShowcaseProfiles (una sola
+// petición para toda la página).
+function Showcase({ profiles, onCta }) {
+  const state = profiles || { status: 'loading', items: [] }
   const viewport = useViewportWidth()
   const phoneWidth = viewport < 400 ? 220 : 236
 
-  // Se carga una sola vez, cuando la sección se acerca a la pantalla.
-  useEffect(() => {
-    if (!near) return
-    let active = true
-    setState((current) => (current.status === 'idle' ? { status: 'loading', items: [] } : current))
-    loadShowcase()
-      .then((items) => { if (active) setState({ status: 'ready', items }) })
-      .catch(() => { if (active) setState({ status: 'error', items: [] }) })
-    return () => { active = false }
-  }, [near])
-
   const real = state.items
-  const samples = state.status !== 'loading' && state.status !== 'idle' && real.length === 0
+  const samples = state.status !== 'loading' && real.length === 0
 
   return (
-    <section ref={ref} id="ejemplos" aria-labelledby="ejemplos-title" className="scroll-mt-20 py-20 sm:py-28">
+    <section id="ejemplos" aria-labelledby="ejemplos-title" className="scroll-mt-20 py-20 sm:py-28">
       <div className="mx-auto max-w-6xl px-5 sm:px-8">
         <SectionHeading id="ejemplos-title" eyebrow="Ejemplos reales" title={samples ? 'Así se ven los perfiles ClyClick' : 'Negocios que ya están a un toque'}>
           {samples ? 'Cada perfil se adapta a la marca y a lo que ofrece el negocio.' : 'Perfiles publicados con ClyClick. Ábrelos y pruébalos como lo haría un cliente.'}
         </SectionHeading>
 
         <div className="mt-14 flex flex-wrap justify-center gap-6">
-          {state.status === 'idle' || state.status === 'loading'
+          {state.status === 'loading'
             ? [0, 1].map((index) => <div key={index} className="h-[590px] w-[292px] animate-pulse rounded-[2rem] bg-white/[.04]" aria-hidden="true" />)
             : (samples ? FALLBACK.map((id) => ({ sample: true, business: sampleBusiness({ rubro: id }) })) : real.map((business) => ({ sample: false, business })))
               .map(({ sample, business }, index) => (
@@ -55,7 +33,7 @@ function Showcase({ onCta }) {
                   <ShowcaseCard business={business} sample={sample} phoneWidth={phoneWidth} />
                 </Reveal>
               ))}
-          {state.status !== 'idle' && state.status !== 'loading' && (
+          {state.status !== 'loading' && (
             <Reveal delay={Math.min(real.length || FALLBACK.length, 5) * 90} className="w-full max-w-[292px]">
               <YourBusinessCard onCta={onCta} />
             </Reveal>

@@ -5,6 +5,7 @@ import { CONTACT, contactMessage, contactWhatsappUrl, formatPhone, leadReplyMess
 import { RUBROS, SHOWCASE_ROTATION, getRubro, inferRubro, rubroActionSettings, sampleBusiness } from '../src/utils/rubros.js'
 import { LEAD_ID_PATTERN, LEAD_LIMITS, applyLeadUpdate, createLeadRecord, leadFromMetadata, leadMetadata, leadToBusiness, newLeadId, validateLead } from '../src/utils/leads.js'
 import { nameFromQuery, pickShowcase, SITE } from '../src/utils/site.js'
+import { fetchShowcaseProfiles, heroRotation, withoutVideo } from '../src/utils/showcase.js'
 import { slugify } from '../src/utils/slug.js'
 import { ACTION_DEFINITIONS, buildActions } from '../src/utils/links.js'
 import { THEMES } from '../src/utils/themes.js'
@@ -355,4 +356,52 @@ test('slugify es el mismo en el navegador y en el servidor; ?negocio= precarga e
   assert.equal(nameFromQuery('?negocio=pizzeria-napoli'), 'Pizzeria Napoli')
   assert.equal(nameFromQuery('?negocio=%3Cimg%20src%3Dx%3E'), 'Img Srcx')
   assert.equal(nameFromQuery('?otro=1'), '')
+})
+
+// --- Portada: rota los perfiles reales ----------------------------------------
+
+test('la portada rota los perfiles reales; los ejemplos solo si no hay ninguno', () => {
+  const real = [{ slug: 'carthings', name: 'CARTHINGS' }, { slug: 'clyclick-sas', name: 'Clyclick S.A.S' }]
+  const slides = heroRotation(real)
+  assert.deepEqual(slides.map((slide) => [slide.kind, slide.id, slide.label]), [['real', 'carthings', 'CARTHINGS'], ['real', 'clyclick-sas', 'Clyclick S.A.S']])
+  assert.equal(slides[0].business, real[0], 'se muestra el perfil tal cual (información real)')
+  for (const empty of [[], null, undefined]) {
+    const fallback = heroRotation(empty)
+    assert.ok(fallback.length > 1)
+    assert.ok(fallback.every((slide) => slide.kind === 'sample' && slide.business.name))
+  }
+})
+
+test('fetchShowcaseProfiles trae los perfiles completos que se pueden mostrar', async () => {
+  const index = [
+    { slug: 'carthings', updatedAt: 2 }, { slug: 'clyclick-sas', updatedAt: 3 },
+    { slug: 'oculto', updatedAt: 9, showcase: false }, { slug: 'bar', updatedAt: 8, ageGate: true }, { slug: 'borrado', updatedAt: 1 },
+  ]
+  const profiles = {
+    carthings: { slug: 'carthings', name: 'CARTHINGS' },
+    'clyclick-sas': { slug: 'clyclick-sas', name: 'Clyclick S.A.S' },
+  }
+  const requested = []
+  const fetcher = async (url) => {
+    requested.push(url)
+    if (url === '/api/businesses') return Response.json({ businesses: index })
+    const slug = decodeURIComponent(url.split('/').pop())
+    return profiles[slug] ? Response.json(profiles[slug]) : new Response('{}', { status: 404 })
+  }
+  const result = await fetchShowcaseProfiles(fetcher)
+  assert.deepEqual(result.map((business) => business.slug), ['clyclick-sas', 'carthings'], 'más recientes primero; sin ocultos, con edad ni borrados')
+  assert.ok(!requested.some((url) => url.includes('oculto') || url.includes('bar')), 'ni siquiera se piden los que no se muestran')
+
+  // Un perfil que activó la puerta de edad después de indexarse tampoco sale.
+  profiles.carthings = { ...profiles.carthings, ageGate: { enabled: true } }
+  assert.deepEqual((await fetchShowcaseProfiles(fetcher)).map((business) => business.slug), ['clyclick-sas'])
+  await assert.rejects(fetchShowcaseProfiles(async () => new Response('', { status: 500 })))
+})
+
+test('withoutVideo cambia un fondo de video por su degradado mientras carga la página', () => {
+  const video = { name: 'X', background: { type: 'video', url: '/v.mp4', color: '#294394', color2: '#091f43', angle: 160 } }
+  assert.deepEqual(withoutVideo(video).background, { type: 'gradient', url: '/v.mp4', color: '#294394', color2: '#091f43', angle: 160 })
+  assert.equal(withoutVideo({ background: { type: 'video', url: '/v.mp4' } }).background.type, 'theme')
+  const image = { background: { type: 'image', url: '/a.jpg' } }
+  assert.equal(withoutVideo(image), image, 'los demás fondos no cambian')
 })

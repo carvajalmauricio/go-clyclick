@@ -1,14 +1,15 @@
 import { useRef } from 'react'
-import PhoneMockup from '../PhoneMockup.jsx'
+import PhoneMockup, { DEVICES } from '../PhoneMockup.jsx'
 import { Icon } from '../Icons.jsx'
-import { RUBROS, SHOWCASE_ROTATION, getRubro } from '../../utils/rubros.js'
+import { RUBROS, getRubro } from '../../utils/rubros.js'
+import { withoutVideo } from '../../utils/showcase.js'
 import { THEME_LIST } from '../../utils/themes.js'
 import { CONTACT, contactWhatsappUrl } from '../../utils/contact.js'
 import { ThemeSwatch, primaryButton, useMediaQuery, useViewportWidth, whatsappButton } from './shared.jsx'
 
 // Portada: el teléfono que cambia de negocio (A) + "escribe el nombre de tu
 // negocio y míralo en vivo" (C).
-export default function HeroBuilder({ builder, onCta }) {
+export default function HeroBuilder({ builder, mediaReady = true, onCta }) {
   const inputRef = useRef(null)
   const desktop = useMediaQuery('(min-width: 1024px)')
   const viewport = useViewportWidth()
@@ -81,15 +82,20 @@ export default function HeroBuilder({ builder, onCta }) {
         {/* Teléfono */}
         <div className="relative mt-10 flex flex-col items-center lg:col-start-2 lg:row-span-6 lg:row-start-1 lg:mt-0 lg:self-center xl:pr-20">
           <div aria-hidden="true" className="landing-phone-glow pointer-events-none absolute left-1/2 top-1/2 h-[70%] w-[120%] -translate-x-1/2 -translate-y-1/2" />
-          <div onMouseEnter={() => builder.setHovered(true)} onMouseLeave={() => builder.setHovered(false)} className="relative">
+          <div ref={builder.phoneRef} onMouseEnter={() => builder.setHovered(true)} onMouseLeave={() => builder.setHovered(false)} className="relative">
             <FloatingBadges />
-            <PhoneMockup
-              business={builder.business}
-              width={phoneWidth}
-              interactive={false}
-              caption={false}
-              transitionKey={`${builder.rubro.id}-${builder.theme.id}`}
-            />
+            {builder.loading ? (
+              <PhoneSkeleton width={phoneWidth} />
+            ) : (
+              <PhoneMockup
+                // Los fondos de video se cargan después del resto de la página.
+                business={mediaReady ? builder.business : withoutVideo(builder.business)}
+                width={phoneWidth}
+                interactive={false}
+                caption={false}
+                transitionKey={builder.transitionKey}
+              />
+            )}
           </div>
           {/* Solo anuncia cambios de rubro o estilo (no cada letra que se escribe). */}
           <p className="sr-only" aria-live="polite">
@@ -103,15 +109,14 @@ export default function HeroBuilder({ builder, onCta }) {
             <p className="mb-2.5 text-center text-sm font-medium text-white/80 lg:text-left">¿A qué se dedica?</p>
             <div role="group" aria-label="Tipo de negocio" className="landing-scroll -mx-5 flex gap-2 overflow-x-auto px-5 pb-1 lg:mx-0 lg:flex-wrap lg:overflow-visible lg:px-0">
               {RUBROS.map((option) => {
-                const active = option.id === rubro.id
-                const pressed = builder.touched && active
+                const pressed = builder.touched && option.id === rubro.id
                 return (
                   <button
                     key={option.id}
                     type="button"
                     onClick={() => builder.setRubro(option.id)}
                     aria-pressed={pressed}
-                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${pressed ? 'border-clickclick-orange bg-clickclick-orange/15 font-semibold text-clickclick-orange' : active ? 'border-white/30 bg-white/[.07] text-white' : 'border-white/10 bg-white/[.03] text-white/70 hover:border-white/30 hover:text-white'}`}
+                    className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white ${pressed ? 'border-clickclick-orange bg-clickclick-orange/15 font-semibold text-clickclick-orange' : 'border-white/10 bg-white/[.03] text-white/70 hover:border-white/30 hover:text-white'}`}
                   >
                     <Icon name={option.icon} size={15} /> {option.label}
                   </button>
@@ -121,7 +126,7 @@ export default function HeroBuilder({ builder, onCta }) {
           </div>
           <div>
             <p className="mb-2.5 text-center text-sm font-medium text-white/80 lg:text-left">
-              Elige tu estilo <span className="font-normal text-white/50">· {theme.name}</span>
+              Elige tu estilo {builder.touched && <span className="font-normal text-white/50">· {theme.name}</span>}
             </p>
             <div role="group" aria-label="Estilo del perfil" className="landing-scroll -mx-5 flex gap-2.5 overflow-x-auto px-5 py-1.5 lg:mx-0 lg:flex-wrap lg:gap-2 lg:overflow-visible lg:px-1">
               {THEME_LIST.map((option) => (
@@ -160,19 +165,59 @@ function PhoneCaption({ builder }) {
       </p>
     )
   }
+  if (builder.loading) return <p className="relative mt-5 h-7 text-xs text-white/40" aria-hidden="true">Cargando perfiles…</p>
+  const { current, slides } = builder
+  const real = current.kind === 'real'
   return (
-    <div className="relative mt-5 flex items-center gap-3 text-xs text-white/55">
-      <span>Ejemplo · {builder.rubro.label} · {builder.theme.name}</span>
-      <span className="flex items-center gap-1.5" aria-hidden="true">
-        {SHOWCASE_ROTATION.map((id, index) => (
-          <span key={id} className={`h-1.5 rounded-full transition-all ${index === builder.rotation ? 'w-4 bg-clickclick-orange' : 'w-1.5 bg-white/25'}`} />
-        ))}
-      </span>
-      {!builder.reducedMotion && (
-        <button type="button" onClick={() => builder.setPaused(!builder.paused)} aria-label={builder.paused ? 'Reanudar ejemplos' : 'Pausar ejemplos'} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 text-white/70 hover:border-white/40 hover:text-white">
+    <div className="relative mt-5 flex max-w-full flex-wrap items-center justify-center gap-x-3 gap-y-2 text-xs text-white/60">
+      {real ? (
+        <a href={`/${current.business.slug}`} target="_blank" rel="noopener" className="group inline-flex min-w-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/[.04] px-3 py-1.5 hover:border-white/40 hover:text-white">
+          <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-emerald-400" aria-hidden="true" />
+          <span className="truncate">Perfil real · <strong className="font-semibold text-white">{current.business.name}</strong></span>
+          <Icon name="external" size={12} className="shrink-0 opacity-60 group-hover:opacity-100" />
+        </a>
+      ) : (
+        <span>Ejemplo · {current.label}</span>
+      )}
+      {slides.length > 1 && (
+        <span className="flex items-center gap-1" role="group" aria-label={real ? 'Elegir perfil' : 'Elegir ejemplo'}>
+          {slides.map((slide, index) => (
+            <button
+              key={slide.id}
+              type="button"
+              onClick={() => builder.goTo(index)}
+              aria-label={`Ver ${slide.label}`}
+              aria-current={index === builder.index}
+              className="flex h-6 items-center px-0.5"
+            >
+              <span className={`block h-1.5 rounded-full transition-all ${index === builder.index ? 'w-4 bg-clickclick-orange' : 'w-1.5 bg-white/30 hover:bg-white/60'}`} />
+            </button>
+          ))}
+        </span>
+      )}
+      {slides.length > 1 && !builder.reducedMotion && (
+        <button type="button" onClick={() => builder.setPaused(!builder.paused)} aria-label={builder.paused ? 'Reanudar' : 'Pausar'} className="flex h-7 w-7 items-center justify-center rounded-full border border-white/15 text-white/70 hover:border-white/40 hover:text-white">
           <Icon name={builder.paused ? 'play' : 'pause'} size={11} />
         </button>
       )}
+    </div>
+  )
+}
+
+// Marco con el tamaño exacto del teléfono mientras llegan los perfiles.
+function PhoneSkeleton({ width }) {
+  const device = DEVICES[1]
+  const ratio = width / 316
+  const bezel = Math.max(6, Math.round(10 * ratio))
+  const height = Math.round(device.height * (width / device.width))
+  return (
+    <div aria-hidden="true" className="relative bg-black ring-1 ring-gray-700" style={{ width: width + bezel * 2, height: height + bezel * 2, padding: bezel, borderRadius: Math.round(48 * ratio) }}>
+      <div className="flex h-full w-full animate-pulse flex-col items-center gap-3 bg-white/[.04] px-6 pt-20" style={{ borderRadius: Math.round(38 * ratio) }}>
+        <span className="h-20 w-20 rounded-full bg-white/10" />
+        <span className="h-4 w-32 rounded bg-white/10" />
+        <span className="mb-4 h-3 w-20 rounded bg-white/[.07]" />
+        {[0, 1, 2, 3].map((item) => <span key={item} className="h-11 w-full rounded-2xl bg-white/[.07]" />)}
+      </div>
     </div>
   )
 }

@@ -78,9 +78,13 @@ puedes cambiar su título o asignar las cuentas a otra sección.
 
 Presenta ClyClick y recibe solicitudes de perfil (`src/pages/Landing.jsx`).
 
-- **Portada**: un teléfono rota entre negocios de ejemplo. Si el visitante escribe el nombre de su
-  negocio, el teléfono muestra su perfil en vivo con ese nombre, su enlace y el rubro deducido del
-  nombre. Luego puede elegir rubro y estilo. Los ejemplos por rubro están en `src/utils/rubros.js`.
+- **Portada**: un teléfono va mostrando, cada 4 segundos, los **perfiles reales** publicados (los
+  mismos de *Ejemplos reales*), con un enlace para abrir el que se está viendo. Si el visitante
+  escribe el nombre de su negocio, el teléfono muestra su perfil en vivo con ese nombre, su enlace y
+  el rubro deducido del nombre; luego puede elegir rubro y estilo (plantillas en
+  `src/utils/rubros.js`). Solo si no hay perfiles para mostrar, rota ejemplos por rubro.
+- Los fondos de video de los perfiles se cargan después del resto de la página (y nunca con ahorro
+  de datos); mientras tanto se ve su degradado.
 - **Contacto**: *Me gusta, ¡créalo!* ofrece escribir por WhatsApp (+593 97 873 5190, mensaje
   prellenado con negocio, rubro y estilo) o llenar un formulario. También hay una sección de contacto
   con el correo info@clyclick.online y un botón flotante de WhatsApp. Los datos de contacto están

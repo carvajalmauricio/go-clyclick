@@ -5,6 +5,7 @@ import ContactDialog from '../components/landing/ContactDialog.jsx'
 import { Faq, Features, RubroMarquee, Steps } from '../components/landing/InfoSections.jsx'
 import { ContactSection, FloatingWhatsApp, LandingFooter, LandingNav } from '../components/landing/LandingChrome.jsx'
 import { useBuilder } from '../components/landing/useBuilder.js'
+import { useMediaReady, useShowcaseProfiles } from '../components/landing/useShowcaseProfiles.js'
 import { useLandingHead } from '../components/landing/shared.jsx'
 import { nameFromQuery } from '../utils/site.js'
 import '../components/landing/landing.css'
@@ -14,7 +15,9 @@ import '../components/landing/landing.css'
 export default function Landing() {
   useLandingHead()
   const [initialName] = useState(() => (typeof window === 'undefined' ? '' : nameFromQuery(window.location.search)))
-  const builder = useBuilder(initialName)
+  const showcase = useShowcaseProfiles()
+  const mediaReady = useMediaReady()
+  const builder = useBuilder(initialName, showcase)
   const [dialog, setDialog] = useState(null) // { source }
   const heroSource = initialName ? 'notfound' : 'hero'
   const openHero = useCallback(() => setDialog({ source: heroSource }), [heroSource])
@@ -25,11 +28,11 @@ export default function Landing() {
       <a href="#contenido" className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[90] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-clickclick-dark">Saltar al contenido</a>
       <LandingNav onCta={openHero} />
       <main id="contenido">
-        <HeroBuilder builder={builder} onCta={openHero} />
+        <HeroBuilder builder={builder} mediaReady={mediaReady} onCta={openHero} />
         <RubroMarquee />
         <Features />
         <Steps />
-        <Showcase onCta={openShowcase} />
+        <Showcase profiles={showcase} onCta={openShowcase} />
         <Faq />
         <ContactSection selection={builder.selection} />
       </main>
