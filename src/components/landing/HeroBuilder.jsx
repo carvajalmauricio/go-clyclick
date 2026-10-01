@@ -71,7 +71,9 @@ export default function HeroBuilder({ builder, onCta }) {
             )}
           </div>
           <p className="mt-2 break-words text-center text-xs text-white/50 lg:text-left">
-            Así podría quedar tu enlace: <span className="text-white/80">{CONTACT.site}/</span><strong className="font-semibold text-clickclick-orange">{builder.slug}</strong>
+            {/* El enlace baja de línea completo y solo se corta si no cabe. */}
+            Así podría quedar tu enlace:{' '}
+            <span className="inline-block max-w-full break-all"><span className="text-white/80">{CONTACT.site}/</span><strong className="font-semibold text-clickclick-orange">{builder.slug}</strong></span>
           </p>
         </div>
 
