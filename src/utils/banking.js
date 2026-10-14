@@ -64,7 +64,7 @@ export function normalizeBankAccounts(accounts, sections) {
     email: String(account.email || '').trim().slice(0, 160),
     url: paymentUrl(account.url),
     enabled: account.enabled !== false,
-    sectionId: sectionIds.has(account.sectionId) ? account.sectionId : BANK_SECTION_ID,
+    sectionId: account.sectionId === '' ? '' : sectionIds.has(account.sectionId) ? account.sectionId : BANK_SECTION_ID,
     animation: normalizeAnimation(account.animation),
     colors: normalizeButtonColors(account.colors),
   }))
@@ -84,7 +84,7 @@ export function buildBankActions(business) {
       bank: bank.id,
       bankAccount: account,
       url,
-      sectionId: sections.some((section) => section.id === account.sectionId) ? account.sectionId : BANK_SECTION_ID,
+      sectionId: account.sectionId === '' ? '' : sections.some((section) => section.id === account.sectionId) ? account.sectionId : BANK_SECTION_ID,
       animation: normalizeAnimation(account.animation),
       colors: account.colors,
       layout: 'classic',

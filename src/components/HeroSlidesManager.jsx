@@ -12,7 +12,7 @@ import { CROP_PRESETS } from '../utils/image.js'
 import { logoRadius, normalizeHeader } from '../utils/header.js'
 
 // Editor de los slides de la tarjeta de presentación. El slide 1 siempre es la
-// presentación base (logo, nombre, descripción y categoría de "Información básica").
+// presentación base (logo, nombre, descripción y categoría de "Presentación").
 export default function HeroSlidesManager({ business, onChange }) {
   const config = { ...DEFAULT_HERO_SLIDES, ...(business.heroSlides || {}) }
   const items = Array.isArray(config.items) ? config.items : []
@@ -87,7 +87,7 @@ export default function HeroSlidesManager({ business, onChange }) {
             <div className="min-w-0 flex-1">
               <p className="text-[11px] font-semibold uppercase tracking-wider text-gray-500">Slide 1 · Presentación</p>
               <p className="truncate text-sm text-gray-300">{business.name || 'Nombre del negocio'}</p>
-              <p className="text-[11px] text-gray-500">Se edita en «Información básica».</p>
+              <p className="text-[11px] text-gray-500">Se edita en «Presentación».</p>
             </div>
           </li>
 

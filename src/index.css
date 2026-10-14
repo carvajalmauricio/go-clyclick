@@ -16,6 +16,38 @@ body {
   pointer-events: none;
   opacity: 0.48;
 }
+/* Training themes: moving light stays behind opaque, readable cards. */
+.profile-pattern-neon-lanes,
+.profile-pattern-neon-orbit,
+.profile-pattern-neon-burst { overflow: hidden; opacity: .65; }
+.profile-pattern-neon-lanes::before,
+.profile-pattern-neon-orbit::before,
+.profile-pattern-neon-burst::before {
+  content: '';
+  position: absolute;
+  inset: -80px;
+  pointer-events: none;
+}
+.profile-pattern-neon-lanes::before {
+  background: repeating-linear-gradient(125deg, transparent 0 98px, #c4ff0036 99px 101px, transparent 102px 150px);
+  animation: neonLanes 10s linear infinite;
+}
+.profile-pattern-neon-orbit::before {
+  background: radial-gradient(ellipse at 12% 18%, #00f5ff55 0%, transparent 34%), radial-gradient(ellipse at 85% 65%, #ff26da55 0%, transparent 40%);
+  animation: neonOrbit 9s ease-in-out infinite alternate;
+}
+.profile-pattern-neon-burst::before {
+  background: repeating-linear-gradient(25deg, transparent 0 130px, #ff9f4333 132px 135px, transparent 137px 230px), radial-gradient(ellipse at 80% 22%, #d444ff55, transparent 38%);
+  animation: neonBurst 12s ease-in-out infinite alternate;
+}
+@keyframes neonLanes { from { transform: translate3d(-35px, -24px, 0); } to { transform: translate3d(35px, 24px, 0); } }
+@keyframes neonOrbit { from { transform: translate3d(-20px, -30px, 0) scale(1); } to { transform: translate3d(25px, 30px, 0) scale(1.08); } }
+@keyframes neonBurst { from { transform: translate3d(-24px, 0, 0); } to { transform: translate3d(24px, 35px, 0); } }
+@media (prefers-reduced-motion: reduce) {
+  .profile-pattern-neon-lanes::before,
+  .profile-pattern-neon-orbit::before,
+  .profile-pattern-neon-burst::before { animation: none; }
+}
 .profile-pattern-grid {
   background-image: linear-gradient(rgba(255,255,255,.12) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.12) 1px, transparent 1px);
   background-size: 34px 34px;

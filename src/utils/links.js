@@ -1,5 +1,6 @@
 // Construye las URLs finales de los botones de acción del perfil a partir
 // de los datos crudos del negocio.
+import { sortContent } from './contentOrder.js'
 import { buildBankActions } from './banking.js'
 import { normalizeAnimation } from './animations.js'
 import { normalizeLayout } from './buttonStyles.js'
@@ -257,8 +258,22 @@ export const ACTION_DEFINITIONS = [
 
 export function getActionSettings(business) {
   const saved = Array.isArray(business?.actionSettings) ? business.actionSettings : []
-  const byType = new Map(saved.map((item) => [item.type, item]))
-  return ACTION_DEFINITIONS.map((definition, index) => ({
+  if (business?.actionSettingsVersion === 2) return saved.map((item, index) => ({
+    id: item.id || item.type,
+    type: item.type,
+    label: item.label || ACTION_DEFINITIONS.find((definition) => definition.type === item.type)?.label || 'Enlace personalizado',
+    icon: item.type === 'custom' ? 'link' : undefined,
+    enabled: true,
+    order: index,
+    layout: 'classic',
+    thumbnail: '',
+    sectionId: '',
+    animation: 'none',
+    ...item,
+  })).sort((a, b) => a.order - b.order)
+
+  const defaults = ACTION_DEFINITIONS.map((definition, index) => ({
+    id: definition.type,
     type: definition.type,
     label: definition.label,
     enabled: true,
@@ -267,8 +282,15 @@ export function getActionSettings(business) {
     thumbnail: '',
     sectionId: '',
     animation: 'none',
-    ...(byType.get(definition.type) || {}),
-  })).sort((a, b) => a.order - b.order)
+  }))
+  if (!saved.length) return defaults
+  const byType = new Map(defaults.map((item) => [item.type, item]))
+  const existing = saved.filter((item) => byType.has(item.type)).map((item, index) => ({
+    ...byType.get(item.type), ...item, order: Number.isFinite(Number(item.order)) ? Number(item.order) : index,
+  }))
+  const included = new Set(existing.map((item) => item.type))
+  return [...existing, ...defaults.filter((item) => !included.has(item.type)).map((item, index) => ({ ...item, order: saved.length + index }))]
+    .sort((a, b) => a.order - b.order)
 }
 
 // Devuelve la lista de acciones activas del negocio, en orden de prioridad,
@@ -286,15 +308,25 @@ export function buildActions(business) {
   }
   const definitions = new Map(ACTION_DEFINITIONS.map((item) => [item.type, item]))
 
+  function destination(setting) {
+    if (setting.type === 'custom') return safeActionUrl(setting.url)
+    if (setting.type === 'contact') return urls.contact
+    if (setting.destination) return setting.type === 'whatsapp'
+      ? whatsappUrl(setting.destination, `Hola ${b.name || ''}, vengo desde su perfil ClickClick`)
+      : safeActionUrl(setting.destination)
+    return setting.useOwnDestination ? '' : urls[setting.type]
+  }
+
   const actions = getActionSettings(b)
-    .filter((setting) => setting.enabled !== false && urls[setting.type])
+    .filter((setting) => setting.enabled !== false)
     .map((setting) => {
-      const definition = definitions.get(setting.type)
+      const definition = definitions.get(setting.type) || { label: 'Enlace personalizado', icon: 'link' }
+      const url = destination(setting)
       return {
-        key: setting.type,
+        key: setting.id || `action-${setting.type}`,
         label: setting.label || definition.label,
-        icon: definition.icon,
-        url: urls[setting.type],
+        icon: setting.icon || definition.icon,
+        url,
         primary: setting.type === 'whatsapp',
         highlight: setting.type === 'review',
         isContact: setting.type === 'contact',
@@ -304,8 +336,22 @@ export function buildActions(business) {
         animation: normalizeAnimation(setting.animation),
         colors: setting.colors,
       }
-    })
-  return [...actions, ...buildCustomLinks(b), ...buildBankActions(b)]
+    }).filter((action) => action.url)
+  const socialButtons = buildSocials(b, 'buttons').map((social) => ({
+    key: `social:${social.key}`, label: social.label, icon: social.key, url: social.url,
+    layout: 'classic', sectionId: b.socialSections?.[social.key] || '', animation: 'none',
+  }))
+  return [...sortContent([...actions, ...buildCustomLinks(b), ...socialButtons], b.contentOrder), ...buildBankActions(b)]
+}
+
+export function safeActionUrl(value) {
+  const text = String(value || '').trim()
+  if (!text || text.length > 2048 || /[\s\u0000-\u001f]/.test(text)) return ''
+  if (/^[a-z][a-z0-9+.-]*:/i.test(text) && !/^https?:\/\//i.test(text) && !/^[^/:]+:\d+(?:[/?#]|$)/.test(text)) return ''
+  try {
+    const url = new URL(/^https?:\/\//i.test(text) ? text : `https://${text}`)
+    return ['https:', 'http:'].includes(url.protocol) && url.hostname && !url.username && !url.password ? url.href : ''
+  } catch { return '' }
 }
 
 // Convierte los enlaces personalizados del negocio en el mismo formato de
@@ -337,7 +383,7 @@ export function buildCustomLinks(business) {
 // orden explícito (business.socialOrder o business.social.order) si existe;
 // de lo contrario usa el orden del catálogo. Compatible con perfiles antiguos
 // que solo traen las 4 redes originales.
-export function buildSocials(business) {
+export function buildSocials(business, presentation = 'icons') {
   const s = (business && business.social) || {}
   const explicitOrder = normalizeSocialOrder(
     (business && business.socialOrder) || s.order || []
@@ -351,6 +397,8 @@ export function buildSocials(business) {
   for (const key of orderedKeys) {
     const value = s[key]
     if (!value) continue
+    const mode = business?.socialDisplay?.[key] || 'icons'
+    if (presentation !== 'all' && mode !== 'both' && mode !== presentation) continue
     const network = SOCIAL_NETWORK_MAP.get(key)
     const url = network.buildUrl(value)
     if (!url) continue

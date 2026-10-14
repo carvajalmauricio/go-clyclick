@@ -2,6 +2,24 @@
 // Cada tema define colores usados por PublicProfile y el simulador móvil.
 
 export const THEMES = {
+  volt: {
+    id: 'volt', name: 'Volt Training', bg: '#080d09',
+    bgGradient: 'linear-gradient(155deg, #080d09 0%, #122315 55%, #080d09 100%)',
+    pattern: 'neon-lanes', text: '#f4fff1', subtext: '#b6cdb5',
+    accent: '#c4ff00', accentText: '#101900', card: '#142017', border: '#577a19',
+  },
+  pulse: {
+    id: 'pulse', name: 'Pulse Arena', bg: '#070c1c',
+    bgGradient: 'linear-gradient(155deg, #070c1c 0%, #152345 50%, #240b35 100%)',
+    pattern: 'neon-orbit', text: '#f1fbff', subtext: '#b9c9ea',
+    accent: '#00f5ff', accentText: '#00272b', card: '#121e37', border: '#496781',
+  },
+  ignite: {
+    id: 'ignite', name: 'Ignite Crew', bg: '#160b1c',
+    bgGradient: 'linear-gradient(150deg, #160b1c 0%, #34104a 55%, #241016 100%)',
+    pattern: 'neon-burst', text: '#fff6f0', subtext: '#e5bdd2',
+    accent: '#ff9f43', accentText: '#291000', card: '#291532', border: '#8d527f',
+  },
   vibrant: {
     id: 'vibrant',
     name: 'ClyClick Vibrant',
@@ -185,6 +203,9 @@ export const THEME_LIST = Object.values(THEMES)
 
 // Formas y texturas del fondo. Compartido por el editor y la validación al guardar.
 export const BACKGROUND_PATTERNS = [
+  { value: 'neon-lanes', label: 'Líneas Volt' },
+  { value: 'neon-orbit', label: 'Pulso neón' },
+  { value: 'neon-burst', label: 'Energía Ignite' },
   { value: 'none', label: 'Ninguna' },
   { value: 'shapes', label: 'Formas' },
   { value: 'grid', label: 'Cuadrícula' },

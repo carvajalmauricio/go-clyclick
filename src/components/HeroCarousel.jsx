@@ -1,3 +1,4 @@
+import { textPresentation } from '../utils/typography.js'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { getHeroSlides, normalizeInterval } from '../utils/heroSlides.js'
 import { descriptionColor } from '../utils/heroDescription.js'
@@ -253,6 +254,8 @@ function Carousel({ slides, business, theme, compact, interval }) {
 }
 
 function HeroSlide({ slide, business, theme, compact, asHeading = true, priority = true }) {
+  const text = textPresentation(business, theme)
+  const typography = text.typography
   const header = normalizeHeader(business.header)
   const size = logoPixels(header.logoSize, compact)
   const left = header.align === 'left'
@@ -266,7 +269,7 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true, priority
   const title = slide.isBase ? slide.title || 'Nombre del negocio' : slide.title
 
   return (
-    <div className={`flex w-full flex-col ${left ? 'items-start text-left' : 'items-center text-center'}`}>
+    <div className={`flex w-full min-w-0 flex-col ${left ? 'items-start text-left' : 'items-center text-center'}`} style={{ fontFamily: text.family, overflowWrap: 'anywhere' }}>
       <div
         className="flex shrink-0 items-center justify-center overflow-hidden shadow-lg"
         style={{ width: size, height: size, borderRadius: logoRadius(header.logoShape, size), background: theme.card, border: `2px solid ${theme.accent}` }}
@@ -289,8 +292,9 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true, priority
         )}
       </div>
 
+      <div className={`flex w-full min-w-0 flex-col rounded-2xl ${left ? 'items-start text-left' : 'items-center text-center'}`} style={{ background: text.background, padding: text.background ? 16 : undefined, marginTop: text.background ? 16 : undefined }}>
       {title && (
-        <Title className="mt-4 break-words font-bold" style={{ fontSize: compact ? 20 : 26 }}>
+        <Title className="mt-4 break-words font-bold" style={{ fontSize: business.typography ? typography.titleSize : compact ? 20 : 26, lineHeight: typography.lineHeight, color: text.title }}>
           {title}
         </Title>
       )}
@@ -300,10 +304,11 @@ function HeroSlide({ slide, business, theme, compact, asHeading = true, priority
         </span>
       )}
       {slide.description && (
-        <p className="mt-3 text-sm" style={{ color: descriptionColor(business, theme) }}>
+        <p className="mt-3 text-sm" style={{ color: text.description, fontSize: typography.descriptionSize, lineHeight: typography.lineHeight }}>
           {slide.description}
         </p>
       )}
+      </div>
     </div>
   )
 }

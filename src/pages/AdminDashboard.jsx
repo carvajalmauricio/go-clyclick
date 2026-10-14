@@ -1,3 +1,4 @@
+import { useDraftAutosave } from '../components/admin/useDraftAutosave.js'
 import { useCallback, useEffect, useReducer, useState } from 'react'
 import BusinessForm, { FORM_SECTIONS } from '../components/BusinessForm.jsx'
 import { Icon } from '../components/Icons.jsx'
@@ -39,6 +40,7 @@ const EMPTY_BUSINESS = {
   socialOrder: [],
   socialPosition: 'top',
   actionSettings: [],
+  actionSettingsVersion: 2,
   sections: [{ id: BANK_SECTION_ID, title: 'Datos Bancarios' }],
   bankAccounts: [],
   // Los perfiles nuevos no aparecen en la página de inicio hasta activarlo.
@@ -150,7 +152,6 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [loadError, setLoadError] = useState('')
-  const [draftRecovered, setDraftRecovered] = useState(false)
   const [preview, setPreview] = useState(false) // móvil: alterna editor / vista previa
   const [openSections, setOpenSections] = useState(() => new Set(['basic']))
   const [focus, setFocus] = useState(null) // { key, nonce } → abre un botón en el editor
@@ -165,6 +166,7 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
   const dirty = JSON.stringify(business) !== JSON.stringify(baseline)
   const loadFailed = Boolean(loadError)
   const issues = getSectionIssues(business)
+  const autosave = useDraftAutosave({ business, baseline, draftKey, disabled: loading || saving || loadFailed })
 
   useEffect(() => {
     let active = true
@@ -175,12 +177,11 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
         if (!active) return
         // Perfiles guardados antes de existir "showcase" se muestran en la
         // página de inicio (igual que en el servidor); los nuevos, no.
-        const initial = { ...EMPTY_BUSINESS, ...data, header: normalizeHeader(data.header), showcase: isEdit ? data.showcase !== false : false }
+        const initial = { ...EMPTY_BUSINESS, ...data, header: normalizeHeader(data.header), showcase: isEdit ? data.showcase !== false : false, actionSettingsVersion: isEdit ? data.actionSettingsVersion : 2 }
         setBaseline(initial)
         const draft = readDraft(draftId)
         if (draft) {
           dispatch({ type: 'reset', value: { ...initial, ...draft.business, ...(isEdit ? { slug } : {}) } })
-          setDraftRecovered(true)
           toast.info('Borrador recuperado de este navegador. Aún no está publicado.', { id: 'draft', duration: 8000 })
         } else if (lead) {
           dispatch({ type: 'reset', value: { ...initial, ...leadToBusiness(lead) } })
@@ -203,11 +204,11 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
   }, [isEdit, slug])
 
   useEffect(() => {
-    if (!dirty) return
+    if (!dirty || autosave.status === 'saved') return
     const warn = (event) => { event.preventDefault(); event.returnValue = '' }
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
-  }, [dirty])
+  }, [dirty, autosave.status])
 
   // La selección desde el preview se consume una sola vez: si quedara fija, al
   // volver a abrir la sección se saltaría otra vez al último botón elegido.
@@ -223,16 +224,12 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
 
   function saveDraft() {
     if (loadFailed || saving) return
-    try {
-      localStorage.setItem(draftKey, JSON.stringify({ business, savedAt: Date.now() }))
-      toast.success('Borrador guardado en este navegador. Aún no está publicado.', { id: 'draft' })
-    } catch {
-      toast.error('No se pudo guardar el borrador. Mantén esta página abierta o publica los cambios.')
-    }
+    if (autosave.flush()) toast.success('Borrador guardado en este navegador. Aún no está publicado.', { id: 'draft' })
+    else toast.error('No se pudo guardar el borrador. Mantén esta página abierta o publica los cambios.')
   }
 
   function leaveEditor() {
-    if (!dirty || window.confirm('Hay cambios sin publicar. ¿Salir del editor? Guarda un borrador antes de salir para recuperarlos.')) onDone()
+    if (!dirty || autosave.flush() || window.confirm('No se pudo guardar el borrador. ¿Salir y perder los cambios?')) onDone()
   }
 
   // Descartar pide confirmación (como antes) y además ofrece "Deshacer", que
@@ -242,11 +239,10 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
     let hadDraft = false
     try {
       hadDraft = Boolean(localStorage.getItem(draftKey))
-      localStorage.removeItem(draftKey)
+      autosave.clear()
     } catch { /* Storage may be unavailable. */ }
     const previous = business
     dispatch({ type: 'replace', value: baseline })
-    setDraftRecovered(false)
     toast.info('Cambios descartados.', {
       id: 'draft',
       duration: 10000,
@@ -283,7 +279,8 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
   // #6 Clic en el preview → abre la configuración de ese elemento.
   function selectFromPreview(target) {
     if (target.kind === 'action') {
-      goToSection(target.key.startsWith('bank-') ? 'bank' : 'actions', false)
+      goToSection(target.key.startsWith('bank-') ? 'bank' : target.key.startsWith('social:') ? 'social' : 'actions', false)
+      if (target.key.startsWith('social:')) requestAnimationFrame(() => document.getElementById(`editor-social-${target.key.slice(7)}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }))
       setFocus({ key: target.key, nonce: Date.now() })
       setHighlightKey(target.key)
       return
@@ -303,7 +300,7 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
     setSaving(true)
     try {
       const result = await saveBusiness(business, { isEdit })
-      try { localStorage.removeItem(draftKey) } catch { /* Published successfully. */ }
+      try { autosave.clear() } catch { /* Published successfully. */ }
       const publishedSlug = result?.slug || business.slug
       toast.success(`«${business.name}» publicado.`, publishedSlug ? { action: { label: 'Ver perfil', onClick: () => window.open(`/${publishedSlug}`, '_blank', 'noopener') } } : undefined)
       // La solicitud queda como atendida y enlazada al perfil creado (se espera
@@ -356,7 +353,7 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
   const status = loadFailed
     ? { color: 'bg-red-500', text: 'No se pudo cargar' }
     : dirty
-      ? { color: 'bg-amber-400', text: draftRecovered ? 'Borrador recuperado · sin publicar' : 'Cambios sin publicar' }
+      ? { color: 'bg-amber-400', text: autosave.status === 'error' ? 'No se pudo guardar el borrador' : autosave.status === 'saved' ? 'Borrador guardado en este navegador · sin publicar' : 'Guardando borrador…' }
       : { color: 'bg-emerald-500', text: isEdit ? 'Publicado' : 'Sin cambios' }
   const canUndo = history.past.length > 0
   const canRedo = history.future.length > 0
@@ -469,6 +466,7 @@ function Editor({ isEdit, slug, lead = null, onDone }) {
       <div className="mx-auto grid max-w-7xl grid-cols-1 gap-8 px-4 pb-10 pt-2 sm:px-6 lg:grid-cols-[minmax(0,1fr)_360px]">
         <div className={preview ? 'hidden lg:block' : 'block'}>
           <fieldset disabled={saving || loadFailed} className="min-w-0">
+            <p className="mb-4 rounded-xl border border-gray-800 bg-gray-900/50 p-3 text-xs text-gray-400">El borrador se guarda automáticamente en este navegador. Solo Publicar actualiza el perfil que ven tus visitantes.</p>
             <BusinessForm
               value={business}
               onChange={patch}

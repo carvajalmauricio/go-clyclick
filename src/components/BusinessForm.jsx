@@ -1,7 +1,7 @@
+import TypographyControls from './TypographyControls.jsx'
 import { useState } from 'react'
 import ThemeSelector from './ThemeSelector.jsx'
-import ActionManager from './ActionManager.jsx'
-import CustomLinksManager from './CustomLinksManager.jsx'
+import ContentManager from './ContentManager.jsx'
 import BankAccountManager from './BankAccountManager.jsx'
 import HeroSlidesManager from './HeroSlidesManager.jsx'
 import { Icon } from './Icons.jsx'
@@ -16,12 +16,12 @@ import { FONTS } from '../utils/fonts.js'
 
 // Secciones del formulario. El editor las usa también para la navegación rápida.
 export const FORM_SECTIONS = [
-  { id: 'basic', icon: 'store', title: 'Información básica', short: 'Básico', description: 'Nombre, logo, categoría y descripción del negocio.' },
-  { id: 'slides', icon: 'slides', title: 'Slides de presentación', short: 'Slides', description: 'Rota la tarjeta de presentación con servicios o platos.' },
-  { id: 'actions', icon: 'cursor', title: 'Botones de acción', short: 'Botones', description: 'Destinos, orden, estilo y secciones de los botones.' },
-  { id: 'bank', icon: 'bank', title: 'Datos bancarios', short: 'Bancos', description: 'Cuentas para transferencias y enlaces de pago.' },
-  { id: 'contact', icon: 'contact', title: 'Contacto y redes', short: 'Contacto', description: 'Datos del contacto descargable (vCard) y redes sociales.' },
-  { id: 'design', icon: 'palette', title: 'Diseño', short: 'Diseño', description: 'Tema, fondo y estilo de los botones.' },
+  { id: 'basic', icon: 'store', title: 'Presentación', short: 'Presentación', description: 'Nombre, logo, categoría y descripción del negocio.' },
+  { id: 'actions', icon: 'cursor', title: 'Contenido y secciones', short: 'Contenido', description: 'Organiza cada sección con sus botones y enlaces.' },
+  { id: 'social', icon: 'instagram', title: 'Redes sociales', short: 'Redes', description: 'Configura cada red una vez y muéstrala como icono o botón.' },
+  { id: 'contact', icon: 'contact', title: 'Contacto', short: 'Contacto', description: 'Datos generales del negocio y del contacto descargable.' },
+  { id: 'bank', icon: 'bank', title: 'Pagos', short: 'Pagos', description: 'Cuentas para transferencias y enlaces de pago.' },
+  { id: 'design', icon: 'palette', title: 'Apariencia', short: 'Apariencia', description: 'Tema, fondo y estilo de los botones.' },
 ]
 
 // Formulario controlado de configuración de negocio.
@@ -49,7 +49,7 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
 
   // Orden efectivo de las redes activas (para reordenar en el editor). Se basa
   // en buildSocials, que ya respeta socialOrder y filtra las redes con valor.
-  const enabledSocials = buildSocials(b)
+  const enabledSocials = buildSocials(b, 'all')
   const moveSocial = (index, dir) => {
     const keys = enabledSocials.map((s) => s.key)
     const target = index + dir
@@ -199,58 +199,46 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
           </div>
           <Toggle checked={b.showcase !== false} onChange={(checked) => onChange({ showcase: checked })} label="Mostrar en la página de inicio" />
         </div>
-      </SectionCard>
+        <SubHeading>Idiomas del perfil</SubHeading>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300">Habilitar inglés (además de español)</p>
+            <p className="text-[11px] text-gray-500">Muestra un selector de idioma en el perfil.</p>
+          </div>
+          <Toggle
+            checked={Array.isArray(b.languages) && b.languages.includes('en')}
+            onChange={(checked) => onChange({ languages: checked ? ['es', 'en'] : ['es'] })}
+            label="Habilitar inglés"
+          />
+        </div>
+        {Array.isArray(b.languages) && b.languages.includes('en') && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Nombre (EN)">
+              <input className={inputCls} value={b.i18n?.en?.name || ''} onChange={setI18n('en', 'name')} placeholder={b.name || 'Business name'} />
+            </Field>
+            <Field label="Categoría (EN)">
+              <input className={inputCls} value={b.i18n?.en?.category || ''} onChange={setI18n('en', 'category')} placeholder={b.category || 'Category'} />
+            </Field>
+            <Field label="Descripción (EN)" className="sm:col-span-2">
+              <textarea className={inputCls} rows={2} value={b.i18n?.en?.description || ''} onChange={setI18n('en', 'description')} placeholder={b.description || 'Description'} />
+            </Field>
+          </div>
+        )}
 
-      <SectionCard {...card('slides')}>
+        <SubHeading>Diapositivas de presentación</SubHeading>
         <HeroSlidesManager business={b} onChange={onChange} />
       </SectionCard>
 
       <SectionCard {...card('actions')}>
-        <SubHeading>Destinos</SubHeading>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="WhatsApp (con código de país)">
-            <input className={inputCls} value={b.whatsapp || ''} onChange={set('whatsapp')} placeholder="+593999999999" inputMode="tel" />
-          </Field>
-          <Field label="Menú / Catálogo (PDF o enlace)">
-            <input className={inputCls} value={b.menuUrl || ''} onChange={set('menuUrl')} placeholder="https://..." />
-          </Field>
-          <Field label="Reseña en Google (5 estrellas)" className="sm:col-span-2">
-            <input className={inputCls} value={b.googleReviewUrl || ''} onChange={set('googleReviewUrl')} placeholder="https://g.page/r/.../review" />
-          </Field>
-          <Field label="Google Maps">
-            <input className={inputCls} value={b.mapsUrl || ''} onChange={set('mapsUrl')} placeholder="https://maps.google.com/?q=..." />
-          </Field>
-          <Field label="Waze">
-            <input className={inputCls} value={b.wazeUrl || ''} onChange={set('wazeUrl')} placeholder="https://waze.com/ul?..." />
-          </Field>
-        </div>
-        <SubHeading>Orden y presentación</SubHeading>
-        <ActionManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
-        <SubHeading>Enlaces personalizados</SubHeading>
-        <CustomLinksManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
+        <ContentManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
       </SectionCard>
 
-      <SectionCard {...card('bank')}>
-        <BankAccountManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
-      </SectionCard>
-
-      <SectionCard {...card('contact')}>
-        <SubHeading>Contacto (vCard)</SubHeading>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Teléfono">
-            <input className={inputCls} value={b.phone || ''} onChange={set('phone')} placeholder="+593..." inputMode="tel" />
-          </Field>
-          <Field label="Email">
-            <input className={inputCls} type="email" value={b.email || ''} onChange={set('email')} placeholder="hola@negocio.com" />
-          </Field>
-          <Field label="Sitio web" className="sm:col-span-2">
-            <input className={inputCls} value={b.website || ''} onChange={set('website')} placeholder="negocio.com" />
-          </Field>
-        </div>
+      <SectionCard {...card('social')}>
         <SubHeading>Redes sociales</SubHeading>
         <div className="grid gap-4 sm:grid-cols-2">
           {SOCIAL_NETWORKS.map((network) => (
-            <Field key={network.key} label={`${network.label} (usuario o URL)`}>
+            <div key={network.key} id={`editor-social-${network.key}`} className="min-w-0 rounded-xl border border-gray-700 p-3">
+            <Field label={`${network.label} (usuario o URL)`}>
               <input
                 className={inputCls}
                 value={b.social?.[network.key] || ''}
@@ -258,6 +246,9 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
                 placeholder={network.placeholder}
               />
             </Field>
+            <Field label="Mostrar como" className="mt-3"><select className={inputCls} value={b.socialDisplay?.[network.key] || 'icons'} onChange={(event) => onChange({ socialDisplay: { ...b.socialDisplay, [network.key]: event.target.value } })}><option value="icons">Icono</option><option value="buttons">Botón</option><option value="both">Icono y botón</option><option value="hidden">Oculta</option></select></Field>
+            {['buttons', 'both'].includes(b.socialDisplay?.[network.key]) && <Field label="Sección del botón" className="mt-3"><select className={inputCls} value={b.socialSections?.[network.key] || ''} onChange={(event) => onChange({ socialSections: { ...b.socialSections, [network.key]: event.target.value } })}><option value="">Botones principales</option>{(b.sections || []).filter((section) => section.id !== 'bank-accounts').map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}</select></Field>}
+            </div>
           ))}
         </div>
         <SubHeading>Posición de las redes</SubHeading>
@@ -295,7 +286,76 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
         )}
       </SectionCard>
 
+      <SectionCard {...card('contact')}>
+        <SubHeading>Contacto (vCard)</SubHeading>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="Teléfono">
+            <input className={inputCls} value={b.phone || ''} onChange={set('phone')} placeholder="+593..." inputMode="tel" />
+          </Field>
+          <Field label="Email">
+            <input className={inputCls} type="email" value={b.email || ''} onChange={set('email')} placeholder="hola@negocio.com" />
+          </Field>
+          <Field label="Sitio web" className="sm:col-span-2">
+            <input className={inputCls} value={b.website || ''} onChange={set('website')} placeholder="negocio.com" />
+          </Field>
+        </div>
+        <SubHeading>Destinos generales para los botones</SubHeading>
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field label="WhatsApp (con código de país)">
+            <input className={inputCls} value={b.whatsapp || ''} onChange={set('whatsapp')} placeholder="+593999999999" inputMode="tel" />
+          </Field>
+          <Field label="Menú / Catálogo (PDF o enlace)">
+            <input className={inputCls} value={b.menuUrl || ''} onChange={set('menuUrl')} placeholder="https://..." />
+          </Field>
+          <Field label="Reseña en Google (5 estrellas)" className="sm:col-span-2">
+            <input className={inputCls} value={b.googleReviewUrl || ''} onChange={set('googleReviewUrl')} placeholder="https://g.page/r/.../review" />
+          </Field>
+          <Field label="Google Maps">
+            <input className={inputCls} value={b.mapsUrl || ''} onChange={set('mapsUrl')} placeholder="https://maps.google.com/?q=..." />
+          </Field>
+          <Field label="Waze">
+            <input className={inputCls} value={b.wazeUrl || ''} onChange={set('wazeUrl')} placeholder="https://waze.com/ul?..." />
+          </Field>
+        </div>
+        <SubHeading>Puerta de edad / contenido sensible</SubHeading>
+        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-xs font-medium text-gray-300">Pedir confirmación de edad</p>
+            <p className="text-[11px] text-gray-500">Bloquea el perfil hasta confirmar la edad.</p>
+          </div>
+          <Toggle checked={b.ageGate?.enabled === true} onChange={(checked) => setAgeGate('enabled', checked)} label="Puerta de edad" />
+        </div>
+        {b.ageGate?.enabled && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Edad mínima">
+              <input
+                className={inputCls}
+                type="number"
+                min={0}
+                max={99}
+                value={Number.isFinite(Number(b.ageGate?.minAge)) ? b.ageGate.minAge : 18}
+                onChange={(e) => setAgeGate('minAge', e.target.value === '' ? '' : Number(e.target.value))}
+              />
+            </Field>
+            <Field label="Mensaje personalizado (opcional)" className="sm:col-span-2">
+              <textarea
+                className={inputCls}
+                rows={2}
+                value={b.ageGate?.message || ''}
+                onChange={(e) => setAgeGate('message', e.target.value)}
+                placeholder="Este perfil contiene contenido para adultos."
+              />
+            </Field>
+          </div>
+        )}
+      </SectionCard>
+
+      <SectionCard {...card('bank')}>
+        <BankAccountManager business={b} onChange={onChange} focus={focus} onFocusItem={onFocusItem} />
+      </SectionCard>
+
       <SectionCard {...card('design')}>
+        <TypographyControls business={b} onChange={onChange} />
         <ThemeSelector
           value={b.theme || 'vibrant'}
           customColors={b.customColors}
@@ -345,63 +405,6 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
           </div>
         )}
 
-        <SubHeading>Idiomas del perfil</SubHeading>
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-300">Habilitar inglés (además de español)</p>
-            <p className="text-[11px] text-gray-500">Muestra un selector de idioma en el perfil.</p>
-          </div>
-          <Toggle
-            checked={Array.isArray(b.languages) && b.languages.includes('en')}
-            onChange={(checked) => onChange({ languages: checked ? ['es', 'en'] : ['es'] })}
-            label="Habilitar inglés"
-          />
-        </div>
-        {Array.isArray(b.languages) && b.languages.includes('en') && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Nombre (EN)">
-              <input className={inputCls} value={b.i18n?.en?.name || ''} onChange={setI18n('en', 'name')} placeholder={b.name || 'Business name'} />
-            </Field>
-            <Field label="Categoría (EN)">
-              <input className={inputCls} value={b.i18n?.en?.category || ''} onChange={setI18n('en', 'category')} placeholder={b.category || 'Category'} />
-            </Field>
-            <Field label="Descripción (EN)" className="sm:col-span-2">
-              <textarea className={inputCls} rows={2} value={b.i18n?.en?.description || ''} onChange={setI18n('en', 'description')} placeholder={b.description || 'Description'} />
-            </Field>
-          </div>
-        )}
-
-        <SubHeading>Puerta de edad / contenido sensible</SubHeading>
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-gray-800 bg-gray-900/40 px-3 py-2.5">
-          <div className="min-w-0">
-            <p className="text-xs font-medium text-gray-300">Pedir confirmación de edad</p>
-            <p className="text-[11px] text-gray-500">Bloquea el perfil hasta confirmar la edad.</p>
-          </div>
-          <Toggle checked={b.ageGate?.enabled === true} onChange={(checked) => setAgeGate('enabled', checked)} label="Puerta de edad" />
-        </div>
-        {b.ageGate?.enabled && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Edad mínima">
-              <input
-                className={inputCls}
-                type="number"
-                min={0}
-                max={99}
-                value={Number.isFinite(Number(b.ageGate?.minAge)) ? b.ageGate.minAge : 18}
-                onChange={(e) => setAgeGate('minAge', e.target.value === '' ? '' : Number(e.target.value))}
-              />
-            </Field>
-            <Field label="Mensaje personalizado (opcional)" className="sm:col-span-2">
-              <textarea
-                className={inputCls}
-                rows={2}
-                value={b.ageGate?.message || ''}
-                onChange={(e) => setAgeGate('message', e.target.value)}
-                placeholder="Este perfil contiene contenido para adultos."
-              />
-            </Field>
-          </div>
-        )}
       </SectionCard>
     </div>
   )
@@ -436,7 +439,8 @@ function getSummaries(b) {
       : 'Desactivado',
     actions: `${plural(destinations, 'destino configurado', 'destinos configurados')} · ${plural(enabledActions.length, 'botón activo', 'botones activos')}${customLinks ? ` · ${plural(customLinks, 'enlace personalizado', 'enlaces personalizados')}` : ''}`,
     bank: accounts ? plural(accounts, 'cuenta', 'cuentas') : 'Sin cuentas',
-    contact: `${plural(contact, 'dato de contacto', 'datos de contacto')} · ${plural(socials, 'red social', 'redes sociales')}`,
+    contact: plural(contact, 'dato de contacto', 'datos de contacto'),
+    social: plural(socials, 'red social', 'redes sociales'),
     design: [`Tema ${themeName}`, ...designExtras].join(' · '),
   }
 }

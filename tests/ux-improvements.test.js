@@ -124,13 +124,13 @@ test('getSectionIssues: avisos de slides, enlaces y email; botones fijos sin des
     links: [{ id: '1', url: '', enabled: true }, { id: '2', url: 'https://x.com', title: '', enabled: true }, { id: '3', url: '', enabled: false }],
     email: 'hola@',
   })
-  assert.deepEqual(issues.slides.map((i) => i.text), ['1 slide sin título'])
+  assert.deepEqual(issues.basic.filter((i) => i.text.includes('slide')).map((i) => i.text), ['1 slide sin título'])
   assert.deepEqual(pendingIssues(issues.actions).map((i) => i.text), ['1 enlace sin URL', '1 enlace sin título'])
   const info = issues.actions.find((i) => i.level === 'info')
   assert.match(info.text, /sin destino/)
   assert.equal(pendingIssues([info]).length, 0, 'lo informativo no cuenta como pendiente')
   assert.equal(issues.contact[0].text, 'El email no parece válido')
-  assert.deepEqual(getSectionIssues({ name: 'x', heroSlides: { enabled: true, items: [] } }).slides[0].text, 'Activado sin slides')
+  assert.deepEqual(getSectionIssues({ name: 'x', heroSlides: { enabled: true, items: [] } }).basic.find((i) => i.text === 'Activado sin slides').text, 'Activado sin slides')
 })
 
 // --- Temas: theme-color y ventanas (#2, #12) ----------------------------------

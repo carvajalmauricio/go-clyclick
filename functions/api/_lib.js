@@ -1,3 +1,6 @@
+import { normalizeContentOrder } from '../../src/utils/contentOrder.js'
+import { normalizeTypography } from '../../src/utils/typography.js'
+import { getActionSettings, safeActionUrl } from '../../src/utils/links.js'
 // ---------------------------------------------------------------------------
 // Utilidades compartidas por las Pages Functions de ClickClick Go
 // ---------------------------------------------------------------------------
@@ -287,16 +290,33 @@ export function normalizeBusiness(payload) {
     return { ok: false, error: 'No se pudo generar un slug válido' }
   }
 
-  const allowedActions = ['whatsapp', 'review', 'maps', 'waze', 'menu', 'website', 'contact']
+  const allowedActions = ['whatsapp', 'review', 'maps', 'waze', 'menu', 'website', 'contact', 'custom']
   const bankError = validateBankAccounts(payload.bankAccounts)
   if (bankError) return { ok: false, error: bankError }
-  const actionSettings = Array.isArray(payload.actionSettings)
-    ? payload.actionSettings
+  if (payload.actionSettings != null && (!Array.isArray(payload.actionSettings) || payload.actionSettings.some((item) => !item || typeof item !== 'object'))) return { ok: false, error: 'La lista de botones no es válida.' }
+  const actionSource = getActionSettings(payload)
+  if (actionSource.length > 100) return { ok: false, error: 'Puedes crear hasta 100 botones.' }
+  const actionIds = new Set()
+  for (const [index, item] of actionSource.entries()) {
+    if (!item || !allowedActions.includes(item.type)) return { ok: false, error: `El botón ${index + 1} no tiene un tipo válido.` }
+    const id = String(item.id || item.type)
+    if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id) || actionIds.has(id)) return { ok: false, error: `El botón ${index + 1} tiene un identificador inválido o repetido.` }
+    actionIds.add(id)
+    if (item.type === 'custom' && item.url && !safeActionUrl(item.url)) return { ok: false, error: `El enlace del botón ${index + 1} no es válido.` }
+    if (item.destination && !['whatsapp', 'contact'].includes(item.type) && !safeActionUrl(item.destination)) return { ok: false, error: `La dirección del botón ${index + 1} no es válida.` }
+  }
+  const actionSettings = Array.isArray(actionSource)
+    ? actionSource
         .filter((item) => item && allowedActions.includes(item.type))
-        .slice(0, allowedActions.length)
+        .slice(0, 100)
         .map((item, order) => ({
+          id: /^[a-zA-Z0-9_-]{1,80}$/.test(String(item.id || '')) ? String(item.id) : String(item.type),
           type: item.type,
           label: String(item.label || '').trim().slice(0, 80),
+          useOwnDestination: item.useOwnDestination === true,
+          destination: String(item.destination || '').trim().slice(0, 2048),
+          url: String(item.url || '').trim().slice(0, 2048),
+          icon: normalizeLinkIcon(item.icon) || undefined,
           enabled: item.enabled !== false,
           order: Number.isFinite(Number(item.order)) ? Number(item.order) : order,
           layout: normalizeLayout(item.layout),
@@ -332,7 +352,7 @@ export function normalizeBusiness(payload) {
     : []
 
   const sections = getProfileSections({ sections: Array.isArray(payload.sections)
-    ? payload.sections.filter((section) => section && typeof section === 'object').slice(0, 13).map((section, index) => ({
+    ? payload.sections.filter((section) => section && typeof section === 'object').slice(0, 50).map((section, index) => ({
         id: String(section?.id || `section-${index}`).trim().slice(0, 80),
         title: String(section?.title || (section?.id === BANK_SECTION_ID ? 'Datos Bancarios' : '')).trim().slice(0, 60),
       })).filter((section) => section.title)
@@ -464,9 +484,14 @@ export function normalizeBusiness(payload) {
     // Redes
     social,
     socialOrder,
+    socialDisplay: Object.fromEntries(SOCIAL_NETWORK_KEYS.map((key) => [key, ['icons', 'buttons', 'both', 'hidden'].includes(payload.socialDisplay?.[key]) ? payload.socialDisplay[key] : 'icons'])),
+    socialSections: Object.fromEntries(SOCIAL_NETWORK_KEYS.map((key) => [key, sections.some((section) => section.id === payload.socialSections?.[key]) ? payload.socialSections[key] : ''])),
+    contentOrder: normalizeContentOrder(payload.contentOrder, [...actionSettings.map((item) => item.id), ...links.map((item) => `link-${item.id}`), ...SOCIAL_NETWORK_KEYS.map((key) => `social:${key}`)]),
     socialPosition,
-    actionSettings,
-    links,
+    actionSettings: actionSettings.map((item) => item.sectionId && !sections.some((section) => section.id === item.sectionId) ? { ...item, sectionId: '' } : item),
+    actionSettingsVersion: 2,
+    typography: normalizeTypography(payload.typography),
+    links: links.map((item) => item.sectionId && !sections.some((section) => section.id === item.sectionId) ? { ...item, sectionId: '' } : item),
     bankAccounts: normalizeBankAccounts(payload.bankAccounts, sections),
     sections,
     updatedAt: Date.now(),

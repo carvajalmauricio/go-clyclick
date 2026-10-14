@@ -90,7 +90,7 @@ Presenta ClyClick y recibe solicitudes de perfil (`src/pages/Landing.jsx`).
   con el correo info@clyclick.online y un botón flotante de WhatsApp. Los datos de contacto están
   en `src/utils/contact.js`.
 - **Ejemplos reales**: se muestran los perfiles publicados con **Mostrar en la página de inicio**
-  activado (en *Información básica*), nunca los que tienen puerta de edad. Los perfiles que ya
+  activado (en *Presentación*), nunca los que tienen puerta de edad. Los perfiles que ya
   existían aparecen por defecto; los nuevos no aparecen hasta activar la opción.
 - Un enlace que no existe (`/mi-negocio`) invita a crear el perfil y abre la portada con ese nombre.
 - La imagen para compartir es `public/og-home.jpg` (1200×630). El servidor añade las etiquetas de `/`
@@ -211,3 +211,13 @@ wrangler.toml                 # Bindings KV (BUSINESSES) y R2 (ASSETS_BUCKET)
 - **Zero Trust**: `go.clyclick.online/admin` está protegido con Access + OTP
   por email. Las operaciones de escritura viven bajo `/admin/api/*` para que
   Access inyecte el JWT que validan las Pages Functions.
+
+
+### Organización del editor
+
+El administrador usa seis tarjetas desplegables: Presentación (incluye diapositivas e idiomas), Contenido y secciones, Redes sociales, Contacto, Pagos y Apariencia.
+
+- Contenido reúne botones predefinidos y enlaces personalizados dentro de cada sección. Se pueden mezclar, ordenar con flechas o arrastrar, y mover entre secciones. Los destinos generales se editan en Contacto; cada botón puede usar uno propio.
+- Cada red se configura una sola vez en Redes sociales y puede mostrarse como icono, botón, ambos u ocultarse. Los botones de redes se ordenan junto al resto del contenido.
+- Las cuentas se gestionan en Pagos. Apariencia reúne fuentes, tamaños, interlineado, contraste, fondo y los temas Volt Training, Pulse Arena e Ignite Crew. Sus fondos animados respetan la preferencia de movimiento reducido.
+- El borrador se guarda automáticamente después de una pausa de 600 ms y al salir del editor. Se conserva en ese navegador y dispositivo; no se sincroniza con otros equipos. Solo **Publicar** guarda el perfil público en el servidor. Si el almacenamiento local falla, el editor lo indica y permite intentar guardar o publicar. Descartar y volver al estado publicado eliminan el borrador local.

@@ -47,7 +47,7 @@ export default function BankAccountManager({ business, onChange, focus, onFocusI
 
   return (
     <div className="space-y-4">
-      <p className="text-xs text-gray-400">Agrega varias cuentas de un mismo banco. Cada cuenta tendrá su propio botón en la sección Datos Bancarios.</p>
+      <p className="text-xs text-gray-400">Agrega varias cuentas de un mismo banco. Puedes ubicar cada botón en la sección que prefieras o dejarlo sin sección.</p>
       <div className="flex flex-wrap items-end gap-3">
         <label className="flex min-w-0 flex-1 flex-col gap-1 text-xs text-gray-400">Banco para agregar
           <select value={selectedBank} onChange={(event) => setSelectedBank(event.target.value)} className={inputClass}>
@@ -152,7 +152,8 @@ function BankAccountEditor({ account, business, sections, index, count, flash, o
       )}
       <p className="mt-3 text-xs text-gray-400">{paymentUrl(account.url) ? 'Al tocar el botón se abrirá el enlace de pago.' : 'Al tocar el botón se mostrarán el titular y los datos de esta cuenta.'}</p>
       <label className="mt-3 flex flex-col gap-1 text-xs text-gray-400">Sección de la cuenta
-        <select value={account.sectionId || BANK_SECTION_ID} onChange={(event) => onChange({ sectionId: event.target.value })} className={inputClass}>
+        <select value={account.sectionId ?? BANK_SECTION_ID} onChange={(event) => onChange({ sectionId: event.target.value })} className={inputClass}>
+          <option value="">Sin sección</option>
           {sections.map((section) => <option key={section.id} value={section.id}>{section.title}</option>)}
         </select>
       </label>
