@@ -1,3 +1,4 @@
+import { hasContactCard, resolveContactCard } from './contactCard.js'
 // Construye las URLs finales de los botones de acción del perfil a partir
 // de los datos crudos del negocio.
 import { sortContent } from './contentOrder.js'
@@ -321,7 +322,7 @@ export function buildActions(business) {
 
   function destination(setting) {
     if (setting.type === 'custom') return safeActionUrl(setting.url)
-    if (setting.type === 'contact') return urls.contact
+    if (setting.type === 'contact') return hasContactCard(b, setting) ? '#contact' : ''
     if (setting.type === 'review' && setting.destination) return googleReviewUrl(setting.destination)
     if (setting.destination) return setting.type === 'whatsapp'
       ? whatsappUrl(setting.destination, `Hola ${b.name || ''}, vengo desde su perfil ClickClick`)
@@ -342,6 +343,7 @@ export function buildActions(business) {
         primary: setting.type === 'whatsapp',
         highlight: setting.type === 'review',
         isContact: setting.type === 'contact',
+        ...(setting.type === 'contact' ? { contactBusiness: resolveContactCard(b, setting) } : {}),
         layout: setting.layout || 'classic',
         thumbnail: setting.thumbnail || '',
         sectionId: setting.sectionId || '',

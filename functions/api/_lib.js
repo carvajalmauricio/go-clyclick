@@ -1,3 +1,4 @@
+import { normalizeContactCard } from '../../src/utils/contactCard.js'
 import { normalizeContentOrder } from '../../src/utils/contentOrder.js'
 import { normalizeTypography } from '../../src/utils/typography.js'
 import { getActionSettings, safeActionUrl, googleReviewUrl } from '../../src/utils/links.js'
@@ -314,6 +315,7 @@ export function normalizeBusiness(payload) {
           type: item.type,
           label: String(item.label || '').trim().slice(0, 80),
           useOwnDestination: item.useOwnDestination === true,
+          ...(item.type === 'contact' ? { contactMode: item.contactMode === 'custom' ? 'custom' : 'business', ...(item.contactData && typeof item.contactData === 'object' ? { contactData: normalizeContactCard(item.contactData) } : {}) } : {}),
           destination: String(item.destination || '').trim().slice(0, 2048),
           url: String(item.url || '').trim().slice(0, 2048),
           icon: normalizeLinkIcon(item.icon) || undefined,

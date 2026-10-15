@@ -1,3 +1,4 @@
+import { hasContactCard } from './contactCard.js'
 // Avance por sección del editor (#14): qué le falta a cada sección.
 // level 'error' bloquea la publicación; 'warn' es un aviso (el elemento no se
 // mostrará o se verá incompleto); 'info' es solo informativo y no cuenta como
@@ -23,7 +24,7 @@ export function getSectionIssues(business) {
   const definitions = new Map(ACTION_DEFINITIONS.map((item) => [item.type, item]))
   const missing = getActionSettings(b).filter((item) => {
     if (item.enabled === false) return false
-    if (item.type === 'contact') return !(b.phone || b.email || b.whatsapp)
+    if (item.type === 'contact') return !hasContactCard(b, item)
     if (item.useOwnDestination && !item.destination) return true
     return item.type === 'custom' ? !item.url : !(item.destination || b[definitions.get(item.type)?.field])
   }).length

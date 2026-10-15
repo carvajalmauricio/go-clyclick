@@ -288,6 +288,7 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
 
       <SectionCard {...card('contact')}>
         <SubHeading>Contacto (vCard)</SubHeading>
+        <p className="text-xs text-gray-400">Estos son los datos generales. Para guardar un contacto diferente, abre el botón «Guardar contacto» en Contenido y secciones y elige «Personalizar este contacto».</p>
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Teléfono">
             <input className={inputCls} value={b.phone || ''} onChange={set('phone')} placeholder="+593..." inputMode="tel" />

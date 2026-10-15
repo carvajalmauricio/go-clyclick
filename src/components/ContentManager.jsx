@@ -1,3 +1,4 @@
+import ContactCardFields from './ContactCardFields.jsx'
 import { useState } from 'react'
 import { ACTION_DEFINITIONS, getActionSettings, safeActionUrl, googleReviewUrl } from '../utils/links.js'
 import { BANK_SECTION_ID, getProfileSections } from '../utils/banking.js'
@@ -131,7 +132,7 @@ function ContentFields({ entry, business, patch, onChange }) {
   const value = isLink || entry.type === 'custom' ? entry.url || '' : entry.destination || ''
   return <>
     <Field label="Título visible"><input className={inputCls} maxLength={80} value={isLink ? entry.valueTitle : entry.label || ''} onChange={(event) => patch(isLink ? { title: event.target.value } : { label: event.target.value })} /></Field>
-    {entry.type === 'contact' ? <p className="text-xs text-gray-400">Este botón descarga los datos definidos en Contacto.</p> : <>
+    {entry.type === 'contact' ? <ContactCardFields entry={entry} business={business} patch={patch} /> : <>
       {!isLink && entry.type !== 'custom' && <Field label="Destino del botón"><select className={inputCls} value={entry.destination ? 'own' : entry.useOwnDestination ? 'own' : 'general'} onChange={(event) => patch({ useOwnDestination: event.target.value === 'own', destination: '' })}><option value="general">Usar dato general de Contacto</option><option value="own">Usar un destino propio</option></select></Field>}
       {(isLink || entry.type === 'custom' || entry.destination || entry.useOwnDestination) ? <Field label={entry.type === 'whatsapp' ? 'Número para este botón' : entry.type === 'review' ? 'Enlace de reseñas o Place ID de Google' : 'URL de destino'}><input className={inputCls} value={value} onChange={(event) => patch(isLink || entry.type === 'custom' ? { url: event.target.value } : { destination: event.target.value })} placeholder={entry.type === 'whatsapp' ? '+593999999999' : entry.type === 'review' ? 'https://g.page/r/.../review o ChIJ...' : 'https://...'} />{value && entry.type !== 'whatsapp' && !(entry.type === 'review' ? googleReviewUrl(value) : safeActionUrl(value)) && <span className="text-xs text-amber-300">Revisa la dirección web.</span>}</Field> : <p className="break-all text-xs text-gray-400">{business[field] || 'Sin dato general. Completa este destino en Contacto o elige un destino propio.'}</p>}
     </>}

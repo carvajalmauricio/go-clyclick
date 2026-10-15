@@ -491,7 +491,7 @@ function ActionCard({ action, business, theme, lang = 'es', highlighted = false 
       {action.bankAccount && !action.url ? (
         <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : action.isContact ? (
-        <button type="button" onClick={() => downloadVCard(business)} aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
+        <button type="button" onClick={() => downloadVCard(action.contactBusiness || business)} aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : (
         <a href={action.url} target="_blank" rel="noopener noreferrer" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</a>
       )}

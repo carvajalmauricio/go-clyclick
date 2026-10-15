@@ -5,14 +5,15 @@ export function buildVCard(business) {
   const name = String(b.name || '').trim() || 'Negocio'
   const phone = String(b.phone || '').trim()
   const whatsapp = String(b.whatsapp || '').trim()
+  const organization = b.organization == null ? name : String(b.organization).trim()
   const lines = [
     'BEGIN:VCARD',
     'VERSION:3.0',
     `N:${escapeVCard(name)};;;;`,
     `FN:${escapeVCard(name)}`,
-    `ORG:${escapeVCard(name)}`,
   ]
 
+  if (organization) lines.push(`ORG:${escapeVCard(organization)}`)
   if (b.category) lines.push(`TITLE:${escapeVCard(b.category)}`)
   if (phone) lines.push(`TEL;TYPE=CELL:${escapeVCard(phone)}`)
   if (whatsapp && onlyDigits(whatsapp) !== onlyDigits(phone)) lines.push(`TEL;TYPE=WORK:${escapeVCard(whatsapp)}`)
