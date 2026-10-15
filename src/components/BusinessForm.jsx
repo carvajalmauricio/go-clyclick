@@ -307,8 +307,8 @@ export default function BusinessForm({ value, onChange, isEdit, openSections, on
           <Field label="Menú / Catálogo (PDF o enlace)">
             <input className={inputCls} value={b.menuUrl || ''} onChange={set('menuUrl')} placeholder="https://..." />
           </Field>
-          <Field label="Reseña en Google (5 estrellas)" className="sm:col-span-2">
-            <input className={inputCls} value={b.googleReviewUrl || ''} onChange={set('googleReviewUrl')} placeholder="https://g.page/r/.../review" />
+          <Field label="Reseñas de Google: enlace o Place ID" hint="Pega el enlace de reseñas o solo el Place ID. El botón generará automáticamente el enlace para escribir una reseña." className="sm:col-span-2">
+            <input className={inputCls} value={b.googleReviewUrl || ''} onChange={set('googleReviewUrl')} placeholder="https://g.page/r/.../review o ChIJ..." />
           </Field>
           <Field label="Google Maps">
             <input className={inputCls} value={b.mapsUrl || ''} onChange={set('mapsUrl')} placeholder="https://maps.google.com/?q=..." />

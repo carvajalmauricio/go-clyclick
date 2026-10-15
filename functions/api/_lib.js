@@ -1,6 +1,6 @@
 import { normalizeContentOrder } from '../../src/utils/contentOrder.js'
 import { normalizeTypography } from '../../src/utils/typography.js'
-import { getActionSettings, safeActionUrl } from '../../src/utils/links.js'
+import { getActionSettings, safeActionUrl, googleReviewUrl } from '../../src/utils/links.js'
 // ---------------------------------------------------------------------------
 // Utilidades compartidas por las Pages Functions de ClickClick Go
 // ---------------------------------------------------------------------------
@@ -303,7 +303,7 @@ export function normalizeBusiness(payload) {
     if (!/^[a-zA-Z0-9_-]{1,80}$/.test(id) || actionIds.has(id)) return { ok: false, error: `El botón ${index + 1} tiene un identificador inválido o repetido.` }
     actionIds.add(id)
     if (item.type === 'custom' && item.url && !safeActionUrl(item.url)) return { ok: false, error: `El enlace del botón ${index + 1} no es válido.` }
-    if (item.destination && !['whatsapp', 'contact'].includes(item.type) && !safeActionUrl(item.destination)) return { ok: false, error: `La dirección del botón ${index + 1} no es válida.` }
+    if (item.destination && !['whatsapp', 'contact'].includes(item.type) && !(item.type === 'review' ? googleReviewUrl(item.destination) : safeActionUrl(item.destination))) return { ok: false, error: `La dirección del botón ${index + 1} no es válida.` }
   }
   const actionSettings = Array.isArray(actionSource)
     ? actionSource

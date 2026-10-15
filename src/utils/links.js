@@ -161,6 +161,17 @@ export function ensureHttp(url) {
   return /^https?:\/\//i.test(url) ? url : `https://${url}`
 }
 
+// Place IDs are opaque tokens; valid IDs do not all start with "ChIJ".
+// Keep the input unchanged in storage and resolve it only when building a link.
+export function googleReviewUrl(value) {
+  const input = String(value || '').trim()
+  if (!input) return ''
+  if (/^[A-Za-z0-9_-]+$/.test(input)) {
+    return `https://search.google.com/local/writereview?placeid=${encodeURIComponent(input)}`
+  }
+  return safeActionUrl(input)
+}
+
 // Extrae una dirección legible desde un enlace de Google Maps para poder
 // copiarla con un toque. Soporta las formas más comunes:
 //   .../maps/place/Direccion+Aqui/...  -> "Direccion Aqui"
@@ -248,7 +259,7 @@ export function normalizeSocialOrder(order) {
 
 export const ACTION_DEFINITIONS = [
   { type: 'whatsapp', label: 'WhatsApp', icon: 'whatsapp', field: 'whatsapp', valueLabel: 'Número con código de país' },
-  { type: 'review', label: 'Déjanos 5 estrellas en Google', icon: 'star', field: 'googleReviewUrl', valueLabel: 'Enlace de reseñas de Google' },
+  { type: 'review', label: 'Déjanos 5 estrellas en Google', icon: 'star', field: 'googleReviewUrl', valueLabel: 'Enlace de reseñas o Place ID de Google' },
   { type: 'maps', label: 'Cómo llegar (Google Maps)', icon: 'maps', field: 'mapsUrl', valueLabel: 'Enlace de Google Maps' },
   { type: 'waze', label: 'Abrir en Waze', icon: 'map', field: 'wazeUrl', valueLabel: 'Enlace de Waze' },
   { type: 'menu', label: 'Ver menú / catálogo', icon: 'menu', field: 'menuUrl', valueLabel: 'Enlace del menú o catálogo' },
@@ -299,7 +310,7 @@ export function buildActions(business) {
   const b = business || {}
   const urls = {
     whatsapp: b.whatsapp ? whatsappUrl(b.whatsapp, `Hola ${b.name || ''}, vengo desde su perfil ClickClick`) : '',
-    review: b.googleReviewUrl ? ensureHttp(b.googleReviewUrl) : '',
+    review: googleReviewUrl(b.googleReviewUrl),
     maps: b.mapsUrl ? ensureHttp(b.mapsUrl) : '',
     waze: b.wazeUrl ? ensureHttp(b.wazeUrl) : '',
     menu: b.menuUrl ? ensureHttp(b.menuUrl) : '',
@@ -311,6 +322,7 @@ export function buildActions(business) {
   function destination(setting) {
     if (setting.type === 'custom') return safeActionUrl(setting.url)
     if (setting.type === 'contact') return urls.contact
+    if (setting.type === 'review' && setting.destination) return googleReviewUrl(setting.destination)
     if (setting.destination) return setting.type === 'whatsapp'
       ? whatsappUrl(setting.destination, `Hola ${b.name || ''}, vengo desde su perfil ClickClick`)
       : safeActionUrl(setting.destination)
