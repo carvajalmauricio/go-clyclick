@@ -1,5 +1,5 @@
 // Iconos SVG inline (sin dependencias externas). Heredan color con currentColor.
-import { TRAINING_ICONS } from '../utils/trainingIcons.js'
+import { TRAINING_ICONS, TRAINING_ICON_STROKE_WIDTH } from '../utils/trainingIcons.js'
 
 export function Icon({ name, size = 22, className = '' }) {
   const props = {
@@ -16,7 +16,7 @@ export function Icon({ name, size = 22, className = '' }) {
   switch (name) {
     case 'training-system':
     case 'training-programs':
-      return <svg {...props}>{TRAINING_ICONS[name].map(({ tag: Shape, attrs }, index) => <Shape key={index} {...attrs} />)}</svg>
+      return <svg {...props} strokeWidth={TRAINING_ICON_STROKE_WIDTH}>{TRAINING_ICONS[name].map(({ tag: Shape, attrs }, index) => <Shape key={index} {...attrs} />)}</svg>
     case 'whatsapp':
       return (
         <svg {...props} fill="currentColor" stroke="none">
