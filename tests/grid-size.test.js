@@ -59,7 +59,7 @@ test('legacy grid buttons keep their existing size and out-of-range inputs are c
 test('standalone training assets match the in-app geometry and contain no visible text', () => {
   for (const [icon, filename] of [['training-system', 'c7-nuestro-sistema'], ['training-programs', 'c7-programas']]) {
     const svg = readFileSync(new URL(`../public/icons/${filename}.svg`, import.meta.url), 'utf8')
-    assert.equal(svg, trainingIconSvg(icon))
+    assert.equal(svg.replace(/\r\n/g, '\n'), trainingIconSvg(icon))
     assert.doesNotMatch(svg, /<text|<image|<rect[^>]*fill=/)
     assert.equal(readFileSync(new URL(`../public/icons/${filename}.png`, import.meta.url)).subarray(1, 4).toString(), 'PNG')
   }
