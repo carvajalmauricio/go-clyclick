@@ -221,3 +221,8 @@ El administrador usa seis tarjetas desplegables: Presentación (incluye diaposit
 - Cada red se configura una sola vez en Redes sociales y puede mostrarse como icono, botón, ambos u ocultarse. Los botones de redes se ordenan junto al resto del contenido.
 - Las cuentas se gestionan en Pagos. Apariencia reúne fuentes, tamaños, interlineado, contraste, fondo y los temas Volt Training, Pulse Arena e Ignite Crew. Sus fondos animados respetan la preferencia de movimiento reducido.
 - El borrador se guarda automáticamente después de una pausa de 600 ms y al salir del editor. Se conserva en ese navegador y dispositivo; no se sincroniza con otros equipos. Solo **Publicar** guarda el perfil público en el servidor. Si el almacenamiento local falla, el editor lo indica y permite intentar guardar o publicar. Descartar y volver al estado publicado eliminan el borrador local.
+
+
+En **Contenido y secciones → abrir botón → Personalizar apariencia**, la presentación **Cuadrícula 2 col** permite ajustar individualmente el tamaño entre 60% y 100% del ancho de su columna. Icono o imagen, texto, espacios, bordes y sombra se escalan juntos; los demás formatos conservan su tamaño. El valor se guarda por botón o enlace.
+
+El selector de iconos incluye **Nuestro sistema** (progresión y evaluación) y **Programas de entrenamiento** (plan de entrenamiento). Los SVG y PNG transparentes, sin texto y en verde fluorescente, están en `public/icons/c7-nuestro-sistema.*` y `public/icons/c7-programas.*`. La geometría compartida está en `src/utils/trainingIcons.js`.

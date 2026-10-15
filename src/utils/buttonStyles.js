@@ -38,6 +38,24 @@ export function normalizeLayout(value) {
   return BUTTON_LAYOUTS.some((option) => option.value === value) ? value : DEFAULT_BUTTON_LAYOUT
 }
 
+// 100% fills one of the two columns; smaller sizes preserve both columns.
+export function normalizeGridScale(value) {
+  const number = Number(value ?? 1)
+  return Number.isFinite(number) ? Math.max(0.6, Math.min(1, number)) : 1
+}
+
+export function gridDimensions(value, fontSize = 14) {
+  const scale = normalizeGridScale(value)
+  return { scale, width: `${Math.round(scale * 100)}%`, icon: 40 * scale,
+    fontSize: fontSize * scale, paddingX: 12 * scale, paddingY: 10 * scale }
+}
+
+// Radius may be a number, multiple pixel values (leaf), or a percentage.
+export function scaleCssPixels(value, scale) {
+  if (typeof value === 'number') return value * scale
+  return String(value).replace(/(-?[\d.]+)px/g, (_, size) => `${Number(size) * scale}px`)
+}
+
 export const DEFAULT_BUTTON_STYLE = { shape: 'rounded', variant: 'filled', shadow: 'soft' }
 
 const pick = (options, value, fallback) => (options.some((option) => option.value === value) ? value : fallback)

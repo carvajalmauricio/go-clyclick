@@ -1,3 +1,4 @@
+import { normalizeGridScale } from '../utils/buttonStyles.js'
 import ContactCardFields from './ContactCardFields.jsx'
 import { useState } from 'react'
 import { ACTION_DEFINITIONS, getActionSettings, safeActionUrl, googleReviewUrl } from '../utils/links.js'
@@ -139,6 +140,12 @@ function ContentFields({ entry, business, patch, onChange }) {
     {(isLink || entry.type === 'custom') && <IconPicker value={entry.icon || 'link'} onChange={(icon) => patch({ icon })} />}
     <details className="rounded-lg border border-gray-700 p-3"><summary className="cursor-pointer text-xs text-gray-300">Personalizar apariencia de este botón</summary><div className="mt-3 space-y-3">
       <LayoutSelector value={entry.layout} onChange={(layout) => patch({ layout })} />
+      {entry.layout === 'grid' && <div className="space-y-2 rounded-lg border border-gray-700 p-3">
+        <Field label={`Tamaño de este botón: ${Math.round(normalizeGridScale(entry.gridScale) * 100)}%`} hint="Se ajustan juntos el icono o imagen, el texto y los espacios. El 100% ocupa el ancho de su columna.">
+          <input aria-label="Tamaño del botón en cuadrícula" type="range" min="60" max="100" step="5" value={Math.round(normalizeGridScale(entry.gridScale) * 100)} onChange={(event) => patch({ gridScale: Number(event.target.value) / 100 })} />
+        </Field>
+        <button type="button" className="text-xs text-gray-400 underline" onClick={() => patch({ gridScale: 1 })}>Restablecer al 100%</button>
+      </div>}
       <AnimationSelector value={entry.animation} business={business} primary={entry.type === 'whatsapp'} onChange={(animation) => patch({ animation })} />
       <ButtonColorFields business={business} action={{ ...entry, primary: entry.type === 'whatsapp' }} onChange={(colors) => patch({ colors })} />
       {entry.thumbnail && <img src={entry.thumbnail} alt="Miniatura" className="h-16 w-24 rounded-lg object-cover" />}

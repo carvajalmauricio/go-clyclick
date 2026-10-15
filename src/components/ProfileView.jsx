@@ -1,3 +1,4 @@
+import { gridDimensions, scaleCssPixels } from '../utils/buttonStyles.js'
 import { normalizeTypography } from '../utils/typography.js'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Icon } from './Icons.jsx'
@@ -381,7 +382,7 @@ function ActionGroup({ actions, business, theme, lang = 'es', highlightKey = '' 
     <div className="flex w-full flex-col gap-3">
       {chunks.map((chunk, index) =>
         chunk.kind === 'grid' ? (
-          <div key={`grid-${index}`} className="grid grid-cols-2 items-stretch gap-3">
+          <div key={`grid-${index}`} className="grid grid-cols-2 items-start gap-3">
             {chunk.items.map((action) => (
               <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} highlighted={highlightKey === action.key} />
             ))}
@@ -416,12 +417,13 @@ function ActionCard({ action, business, theme, lang = 'es', highlighted = false 
   const [showAccount, setShowAccount] = useState(false)
   const style = business.buttonStyle || {}
   const layout = action.layout || 'classic'
-  const radius = buttonRadius(style.shape, layout)
+  const grid = gridDimensions(layout === 'grid' ? action.gridScale : 1, business.typography ? normalizeTypography(business.typography).buttonSize : 14)
+  const radius = scaleCssPixels(buttonRadius(style.shape, layout), grid.scale)
   const colors = getButtonColors(action, theme, style)
   const background = colors.background
   const color = colors.text
-  const border = `${buttonBorderWidth(style.variant)}px solid ${colors.border}`
-  const shadow = buttonShadow(style, theme, colors.border)
+  const border = `${buttonBorderWidth(style.variant) * grid.scale}px solid ${colors.border}`
+  const shadow = scaleCssPixels(buttonShadow(style, theme, colors.border), grid.scale)
   const animation = animationClass(action.animation)
   const innerAnimation = innerAnimationClass(action.animation)
   const typography = normalizeTypography(business.typography)
@@ -454,10 +456,10 @@ function ActionCard({ action, business, theme, lang = 'es', highlighted = false 
         <img src={action.thumbnail} alt={action.label || ''} width={400} height={400} loading="lazy" decoding="async" className="aspect-square w-full shrink-0 object-cover" />
       ) : (
         <div className="flex aspect-square w-full shrink-0 items-center justify-center" style={{ background: mediaBackground }}>
-          <Icon name={action.icon} size={40} />
+          <Icon name={action.icon} size={grid.icon} />
         </div>
       )}
-      <span style={labelStyle} className="flex flex-1 items-center justify-center break-words px-3 py-2.5 text-center text-sm font-semibold leading-snug">{action.label}</span>
+      <span style={{ ...labelStyle, fontSize: grid.fontSize, padding: `${grid.paddingY}px ${grid.paddingX}px` }} className="flex flex-1 items-center justify-center break-words text-center font-semibold leading-snug">{action.label}</span>
     </>
   ) : layout === 'icon' ? (
     <Icon name={action.icon} size={24} />
@@ -475,7 +477,7 @@ function ActionCard({ action, business, theme, lang = 'es', highlighted = false 
   const layoutClass = layout === 'featured'
     ? 'block w-full overflow-hidden'
     : layout === 'grid'
-      ? 'flex h-full w-full flex-col overflow-hidden'
+      ? 'flex w-full flex-col overflow-hidden'
       : layout === 'icon'
         ? 'flex h-14 w-14 items-center justify-center'
         : `flex min-h-14 w-full items-center gap-3 py-3 ${pillLike ? 'px-6' : 'px-4'}`
@@ -485,9 +487,9 @@ function ActionCard({ action, business, theme, lang = 'es', highlighted = false 
   // para que no compitan por `transform`.
   const className = `profile-press ${layoutClass} font-medium backdrop-blur-sm ${innerAnimation}`
   const ariaLabel = needsAriaLabel ? action.label : undefined
-  const wrapperClass = layout === 'icon' ? 'inline-flex' : layout === 'grid' ? 'h-full w-full' : 'w-full'
+  const wrapperClass = layout === 'icon' ? 'inline-flex' : layout === 'grid' ? 'mx-auto' : 'w-full'
   return (
-    <div data-preview-target={`action:${action.key}`} className={`relative ${wrapperClass} ${animation} ${highlighted ? 'profile-preview-highlight' : ''}`} title={needsAriaLabel ? action.label : undefined} style={{ borderRadius: radius, '--profile-action-glow': theme.accent }}>
+    <div data-preview-target={`action:${action.key}`} className={`relative ${wrapperClass} ${animation} ${highlighted ? 'profile-preview-highlight' : ''}`} title={needsAriaLabel ? action.label : undefined} style={{ borderRadius: radius, '--profile-action-glow': theme.accent, ...(layout === 'grid' ? { width: grid.width } : {}) }}>
       {action.bankAccount && !action.url ? (
         <button type="button" onClick={() => setShowAccount(true)} aria-haspopup="dialog" aria-label={ariaLabel} className={className} style={cardStyle}>{content}</button>
       ) : action.isContact ? (

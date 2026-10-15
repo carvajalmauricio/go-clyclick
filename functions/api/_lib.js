@@ -10,7 +10,7 @@ import { BANK_SECTION_ID, getProfileSections, normalizeBankAccounts, validateBan
 import { normalizeButtonColors } from '../../src/utils/buttonColors.js'
 import { normalizeAnimation } from '../../src/utils/animations.js'
 import { normalizeHeroSlides } from '../../src/utils/heroSlides.js'
-import { normalizeButtonStyle, normalizeLayout } from '../../src/utils/buttonStyles.js'
+import { normalizeButtonStyle, normalizeLayout, normalizeGridScale } from '../../src/utils/buttonStyles.js'
 import { LINK_ICONS, buildActions, normalizeLinkIcon, SOCIAL_NETWORK_KEYS, normalizeSocialOrder, normalizeSocialPosition } from '../../src/utils/links.js'
 import { BACKGROUND_PATTERNS, THEMES } from '../../src/utils/themes.js'
 import { normalizeHeader } from '../../src/utils/header.js'
@@ -322,6 +322,7 @@ export function normalizeBusiness(payload) {
           enabled: item.enabled !== false,
           order: Number.isFinite(Number(item.order)) ? Number(item.order) : order,
           layout: normalizeLayout(item.layout),
+          gridScale: normalizeGridScale(item.gridScale),
           thumbnail: String(item.thumbnail || '').trim(),
           sectionId: String(item.sectionId || '').trim().slice(0, 80),
           animation: normalizeAnimation(item.animation),
@@ -344,6 +345,7 @@ export function normalizeBusiness(payload) {
           enabled: item.enabled !== false,
           order: Number.isFinite(Number(item.order)) ? Number(item.order) : 0,
           layout: normalizeLayout(item.layout),
+          gridScale: normalizeGridScale(item.gridScale),
           sectionId: String(item.sectionId || '').trim().slice(0, 80),
           animation: normalizeAnimation(item.animation),
           colors: normalizeButtonColors(item.colors),

@@ -4,13 +4,15 @@ import { hasContactCard, resolveContactCard } from './contactCard.js'
 import { sortContent } from './contentOrder.js'
 import { buildBankActions } from './banking.js'
 import { normalizeAnimation } from './animations.js'
-import { normalizeLayout } from './buttonStyles.js'
+import { normalizeLayout, normalizeGridScale } from './buttonStyles.js'
 
 // Iconos disponibles para los enlaces personalizados. Cada valor debe tener
 // su case en src/components/Icons.jsx.
 // `keywords` alimenta el buscador del selector de iconos del editor.
 export const LINK_ICONS = [
   { value: 'link', label: 'Enlace', keywords: 'url web vinculo' },
+  { value: 'training-system', label: 'Nuestro sistema', keywords: 'c7 metodo entrenamiento evaluacion progreso plan calistenia' },
+  { value: 'training-programs', label: 'Programas de entrenamiento', keywords: 'c7 rutina gimnasio fuerza running rebuild calistenia' },
   { value: 'globe', label: 'Sitio web', keywords: 'pagina internet www' },
   { value: 'whatsapp', label: 'WhatsApp', keywords: 'chat mensaje wa' },
   { value: 'phone', label: 'Teléfono', keywords: 'llamar celular movil' },
@@ -345,6 +347,7 @@ export function buildActions(business) {
         isContact: setting.type === 'contact',
         ...(setting.type === 'contact' ? { contactBusiness: resolveContactCard(b, setting) } : {}),
         layout: setting.layout || 'classic',
+        gridScale: normalizeGridScale(setting.gridScale),
         thumbnail: setting.thumbnail || '',
         sectionId: setting.sectionId || '',
         animation: normalizeAnimation(setting.animation),
@@ -385,6 +388,7 @@ export function buildCustomLinks(business) {
       url: link.url,
       thumbnail: link.thumbnail || '',
       layout: normalizeLayout(link.layout),
+      gridScale: normalizeGridScale(link.gridScale),
       sectionId: link.sectionId || '',
       animation: normalizeAnimation(link.animation),
       colors: link.colors,
