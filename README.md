@@ -225,4 +225,4 @@ El administrador usa seis tarjetas desplegables: Presentación (incluye diaposit
 
 En **Contenido y secciones → abrir botón → Personalizar apariencia**, la presentación **Cuadrícula 2 col** permite ajustar individualmente el tamaño entre 60% y 100% del ancho de su columna. Icono o imagen, texto, espacios, bordes y sombra se escalan juntos; los demás formatos conservan su tamaño. El valor se guarda por botón o enlace.
 
-El selector de iconos incluye **Nuestro sistema** (progresión y evaluación) y **Programas de entrenamiento** (plan de entrenamiento). Los SVG y PNG transparentes, sin texto, en negro y con trazo fino, están en `public/icons/c7-nuestro-sistema.*` y `public/icons/c7-programas.*`. La geometría compartida está en `src/utils/trainingIcons.js`.
+El selector de iconos incluye **Nuestro sistema** (progresión y evaluación) y **Programas de entrenamiento** (plan de entrenamiento). Los SVG y PNG transparentes, sin texto, en blanco y con trazo fino, están en `public/icons/c7-nuestro-sistema.*` y `public/icons/c7-programas.*`. La geometría compartida está en `src/utils/trainingIcons.js`.

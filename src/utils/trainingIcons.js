@@ -15,7 +15,7 @@ export const TRAINING_ICONS = {
   ],
 }
 
-export function trainingIconSvg(name, color = '#000000', size = 512) {
+export function trainingIconSvg(name, color = '#ffffff', size = 512) {
   const shapes = TRAINING_ICONS[name]
   if (!shapes) throw new Error(`Unknown training icon: ${name}`)
   const body = shapes.map(({ tag, attrs }) => `<${tag} ${Object.entries(attrs).map(([key, value]) => `${key}="${value}"`).join(' ')}/>`).join('')
