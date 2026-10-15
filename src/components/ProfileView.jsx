@@ -382,9 +382,9 @@ function ActionGroup({ actions, business, theme, lang = 'es', highlightKey = '' 
     <div className="flex w-full flex-col gap-3">
       {chunks.map((chunk, index) =>
         chunk.kind === 'grid' ? (
-          <div key={`grid-${index}`} className="grid grid-cols-2 items-start gap-3">
-            {chunk.items.map((action) => (
-              <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} highlighted={highlightKey === action.key} />
+          <div key={`grid-${index}`} className="flex flex-col gap-3">
+            {Array.from({ length: Math.ceil(chunk.items.length / 2) }, (_, row) => (
+              <GridActionRow key={row} items={chunk.items.slice(row * 2, row * 2 + 2)} business={business} theme={theme} lang={lang} highlightKey={highlightKey} />
             ))}
           </div>
         ) : chunk.kind === 'icon' ? (
@@ -397,6 +397,46 @@ function ActionGroup({ actions, business, theme, lang = 'es', highlightKey = '' 
           <ActionCard key={chunk.items[0].key} action={chunk.items[0]} business={business} theme={theme} lang={lang} highlighted={highlightKey === chunk.items[0].key} />
         )
       )}
+    </div>
+  )
+}
+
+function GridActionRow({ items, business, theme, lang, highlightKey }) {
+  const root = useRef(null)
+  const typography = normalizeTypography(business.typography)
+  const borderWidth = buttonBorderWidth(business.buttonStyle?.variant)
+
+  useEffect(() => {
+    const row = root.current
+    if (!row) return
+    const probes = [...row.querySelectorAll('[data-grid-label-probe]')]
+    const measure = () => {
+      // Measure unscaled labels so equal percentages share one base height.
+      // Computed CSS heights stay in local pixels even inside the zoomed phone
+      // preview; getBoundingClientRect would apply that zoom a second time.
+      const height = Math.max(0, ...probes.map((probe) => Math.ceil(parseFloat(getComputedStyle(probe).height) || probe.offsetHeight)))
+      if (height) row.style.setProperty('--grid-label-height', `${height}px`)
+    }
+    measure()
+    if (typeof ResizeObserver === 'undefined') {
+      window.addEventListener('resize', measure)
+      return () => window.removeEventListener('resize', measure)
+    }
+    const observer = new ResizeObserver(measure)
+    probes.forEach((probe) => observer.observe(probe))
+    return () => observer.disconnect()
+  }, [items, business.typography, borderWidth])
+
+  return (
+    <div ref={root} className="relative grid grid-cols-2 items-start gap-3" data-grid-row>
+      {items.map((action) => <ActionCard key={action.key} action={action} business={business} theme={theme} lang={lang} highlighted={highlightKey === action.key} />)}
+      <div aria-hidden="true" className="pointer-events-none invisible absolute inset-x-0 top-0 grid grid-cols-2 items-start gap-3">
+        {items.map((action) => <span key={action.key} data-grid-label-probe className="flex min-w-0 items-center justify-center break-words text-center font-semibold leading-snug" style={{
+          fontSize: business.typography ? typography.buttonSize : 14,
+          ...(business.typography ? { lineHeight: typography.lineHeight } : {}),
+          padding: '10px 12px', borderInline: `${borderWidth}px solid transparent`,
+        }}>{action.label}</span>)}
+      </div>
     </div>
   )
 }
@@ -459,7 +499,7 @@ function ActionCard({ action, business, theme, lang = 'es', highlighted = false 
           <Icon name={action.icon} size={grid.icon} />
         </div>
       )}
-      <span style={{ ...labelStyle, fontSize: grid.fontSize, padding: `${grid.paddingY}px ${grid.paddingX}px` }} className="flex flex-1 items-center justify-center break-words text-center font-semibold leading-snug">{action.label}</span>
+      <span data-grid-label style={{ ...labelStyle, fontSize: grid.fontSize, padding: `${grid.paddingY}px ${grid.paddingX}px`, minHeight: `calc(var(--grid-label-height, 0px) * ${grid.scale})` }} className="flex flex-1 items-center justify-center break-words text-center font-semibold leading-snug">{action.label}</span>
     </>
   ) : layout === 'icon' ? (
     <Icon name={action.icon} size={24} />

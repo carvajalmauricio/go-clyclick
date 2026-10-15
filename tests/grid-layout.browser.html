@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="es">
+<head><meta charset="utf-8"><title>Grid button layout regression</title></head>
+<body style="margin:0;background:#111;color:white;font:16px system-ui">
+  <main style="padding:24px">
+    <h1>Grid button layout regression</h1>
+    <button id="run" style="padding:12px">Run layout checks</button>
+    <output id="result" role="status" style="display:block;white-space:pre-wrap;margin:16px 0">Ready</output>
+    <div id="root" style="width:390px;max-width:100%"></div>
+  </main>
+  <script type="module">
+    // Run with Vite and open /tests/grid-layout.browser.html. Uses the real
+    // profile renderer and browser layout engine, including phone-preview zoom.
+    import React from 'react'
+    import { createRoot } from 'react-dom/client'
+    import ProfileView from '/src/components/ProfileView.jsx'
+    import '/src/index.css'
+
+    const root = createRoot(document.getElementById('root'))
+    const host = document.getElementById('root')
+    const result = document.getElementById('result')
+    const frame = () => new Promise(requestAnimationFrame)
+    const waitForLayout = async () => { for (let i = 0; i < 6; i++) await frame() }
+    const check = (condition, message) => { if (!condition) throw new Error(message) }
+    const near = (a, b) => Math.abs(a - b) < 1
+    const samples = [
+      { name: '80%, one-line and two-line titles', width: 390, zoom: 1 },
+      { name: '80% inside zoomed phone preview', width: 390, zoom: .8 },
+      { name: 'narrow profile and long title', width: 320, zoom: 1, long: true },
+      { name: 'different percentages stay proportional', width: 390, zoom: 1, scales: [.8, .6] },
+      { name: 'larger type and line spacing', width: 390, zoom: .8, typography: { buttonSize: 18, lineHeight: 1.8 } },
+      { name: 'each row synchronizes independently', width: 390, zoom: 1, extraRow: true },
+    ]
+
+    async function renderSample(sample) {
+      const labels = ['Nuestro Sistema', sample.long ? 'Programas de entrenamiento personalizado para todos los niveles' : 'Programas de entrenamiento']
+      if (sample.extraRow) labels.push('A', 'B')
+      const links = labels.map((title, index) => ({ id: String(index), title, url: 'https://example.com',
+        layout: 'grid', gridScale: sample.scales?.[index] ?? .8,
+        thumbnail: index % 2 ? '/icons/c7-programas.png' : '/icons/c7-nuestro-sistema.png',
+      }))
+      host.style.width = `${sample.width}px`
+      host.style.zoom = sample.zoom
+      root.render(React.createElement(ProfileView, { embedded: true, device: 'standard', business: {
+        name: 'C7 Calisthenics', theme: 'volt', background: { type: 'theme', pattern: 'neon-lanes' },
+        buttonStyle: { variant: 'neon' }, actionSettingsVersion: 2, actionSettings: [], links,
+        ...(sample.typography ? { typography: sample.typography } : {}),
+      } }))
+      await waitForLayout()
+      const rows = [...host.querySelectorAll('[data-grid-row]')]
+      for (const row of rows) {
+        const cards = [...row.querySelectorAll('[data-preview-target]')]
+        const dimensions = cards.map((card) => {
+          const index = Number(card.dataset.previewTarget.split('-').at(-1))
+          const scale = sample.scales?.[index] ?? .8
+          const box = card.getBoundingClientRect()
+          const label = card.querySelector('[data-grid-label]')
+          check(label.scrollHeight <= label.clientHeight + 1, `${sample.name}: clipped title`)
+          return { width: box.width, height: box.height, scale }
+        })
+        const [a, b] = dimensions
+        if (b) {
+          check(near(a.width / a.scale, b.width / b.scale), `${sample.name}: widths differ`)
+          check(near(a.height / a.scale, b.height / b.scale), `${sample.name}: heights differ`)
+        }
+      }
+      if (sample.extraRow) {
+        const heights = rows.map((row) => parseFloat(row.style.getPropertyValue('--grid-label-height')))
+        check(heights[0] > heights[1], 'row sizing leaked into a different row')
+      }
+    }
+
+    document.getElementById('run').onclick = async () => {
+      result.textContent = 'Running…'
+      try {
+        for (const sample of samples) await renderSample(sample)
+        await renderSample(samples[0])
+        result.textContent = `PASS: ${samples.length} layout cases\n${samples.map((sample) => sample.name).join('\n')}`
+      } catch (error) { result.textContent = `FAIL: ${error.message}` }
+    }
+    await renderSample(samples[0])
+  </script>
+</body>
+</html>
